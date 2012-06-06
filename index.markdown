@@ -15,7 +15,7 @@ processor for a brain](http://www.transbyte.org/SID/SID-files/Bender_6502.jpg).
 
 So, why would you want to learn 6502? It's a dead language isn't it? Well,
 yeah, but so's Latin. And they still teach that.
-[Q.E.D.](http://en.wikipedia.org/wiki/Q.E.D.).
+[Q.E.D.](http://en.wikipedia.org/wiki/Q.E.D.)
 
 Seriously though, I think it's valuable to have an understanding of assembly
 language. Assembly language is the lowest level of abstraction in computers -
@@ -219,13 +219,14 @@ source code to introduce a few different instructions:
       STA $02        ;Store the value of the A register at memory location $02
       BRK            ;Break - we're done
 
-As before, put this in a text editor, and compile it with `dasm example.asm -f3
--v1 -oexample.bin`. Then load it into `py65mon` using `.load example.bin c000`,
-and set the program counter to the start of the code with `.registers pc=c000`.
-Now step through the code, paying special attention to what happens when you
-execute the instruction `ADC #$c0`. According to this processor, `$C0 + $C0 =
-$80`. Huh? If you open up OSX calculator and change the view to "Programmer" you
-can see what the actual result of `$C0 + $C0` is (it's `$180`).
+As before, put this in a text editor (with a two-space indent), and compile it
+with `dasm example.asm -f3 -v1 -oexample.bin`. Then load it into `py65mon`
+using `.load example.bin c000`, and set the program counter to the start of the
+code with `.registers pc=c000`.  Now step through the code, paying special
+attention to what happens when you execute the instruction `ADC #$c0`.
+According to this processor, `$C0 + $C0 = $80`. Huh? If you open up OSX
+calculator and change the view to "Programmer" you can see what the actual
+result of `$C0 + $C0` is (it's `$180`).
 
 So why does the processor give the wrong answer? The problem is, `$180` is too
 big to fit in a single byte (the max is `$FF`), and the registers can only hold
@@ -257,9 +258,54 @@ the carry flag is set. As well as this though, the zero flag is set. The zero
 flag is set by all instructions where the result is zero.
 
 A [full list of the 6502 instruction set is available
-here](http://www.obelisk.demon.co.uk/6502/reference.html). This page details
-the arguments to each instruction, which registers they use, and which flags
-they set. This is your bible. (An [alternative version is available
-here](http://www.6502.org/tutorials/6502opcodes.html).)
+here](http://www.6502.org/tutorials/6502opcodes.html) [and
+here](http://www.obelisk.demon.co.uk/6502/reference.html) (I usually refer to
+both pages as they have their strengths and weaknesses). These pages detail the
+arguments to each instruction, which registers they use, and which flags they
+set. They are your bible.
+
+
+
+<h2 id='branching'>Branching</h2>
+
+So far we're only able to write basic programs without any branching logic.
+Let's change that.
+
+6502 assembly language has a bunch of branching instructions, all of which
+branch based on whether certain flags are set or not. In this example we'll be
+looking at `BNE`: "Branch on not equal".
+
+      processor 6502  ;Set the processor
+      ORG $c000
+
+      LDX #$08
+
+    decrement:
+      DEX
+      CPX #$02
+      BNE decrement
+      BRK
+
+First we load the value `$08` into the `X` register. The next line is a label.
+Labels just mark certain points in a program so we can return to them later.
+After the label we decrement `X`, and then compare it to the value `$02`.
+[`CPX`](http://www.obelisk.demon.co.uk/6502/reference.html#CPX) compares the
+value in the `X` register with another value. If the two values are the same,
+the `Z` flag is set to `1`, otherwise it is set to `0`.
+
+The next line, `BNE decrement`, will shift execution to the decrement label if
+the `Z` flag is set to `1`, otherwise it does nothing and we reach the end of
+the program.
+
+The disassembly of this program looks like this:
+
+    $c000  a2 08     LDX #$08
+    $c002  ca        DEX
+    $c003  e0 02     CPX #$02
+    $c005  d0 fb     BNE $c002
+
+The labels don't actually exist in the compiled program, so they can't be
+regenerated when the program is disassembled. The labels only exist in our
+source code so we don't have to hard-code memory addresses like `$c002`.
 
 <!--Next time is branching, looping, and drawing images in a web-based emulator.-->
