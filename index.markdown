@@ -59,7 +59,7 @@ We'll be using the DASM assembler. [Here's a link to download
 it](http://mac.softpedia.com/progDownload/DASM-Download-34013.html). [Here are
 some instructions on installing it](http://blog.feltpad.net/dasm-on-mac-osx/).
 TL;DR: unzip, go to the unzipped directory in terminal, run `make`, then copy
-dasm in the bin directory to `/usr/bin`.
+`dasm` in the bin directory to `/usr/bin`.
 
 ###The monitor
 
@@ -138,7 +138,7 @@ You may notice that the first two lines of the `.asm` file aren't in the
 disassembly - these were just instructions to the compiler so they don't end up in
 the compiled program.
 
-###Stepping out
+###Stepping through the program
 
 With this program loaded into the monitor, we can step through it to see how
 the computer reacts to each of the instructions. Machine code is read
@@ -275,7 +275,7 @@ Let's change that.
 branch based on whether certain flags are set or not. In this example we'll be
 looking at `BNE`: "Branch on not equal".
 
-      processor 6502  ;Set the processor
+      processor 6502
       ORG $c000
 
       LDX #$08
@@ -290,11 +290,12 @@ First we load the value `$08` into the `X` register. The next line is a label.
 Labels just mark certain points in a program so we can return to them later.
 After the label we decrement `X`, and then compare it to the value `$02`.
 [`CPX`](http://www.obelisk.demon.co.uk/6502/reference.html#CPX) compares the
-value in the `X` register with another value. If the two values are the same,
+value in the `X` register with another value. If the two values are equal,
 the `Z` flag is set to `1`, otherwise it is set to `0`.
 
 The next line, `BNE decrement`, will shift execution to the decrement label if
-the `Z` flag is set to `1`, otherwise it does nothing and we reach the end of
+the `Z` flag is set to `0` (meaning that the two values in the `CPX` comparison
+were not equal), otherwise it does nothing and we reach the end of
 the program.
 
 The disassembly of this program looks like this:
@@ -303,9 +304,74 @@ The disassembly of this program looks like this:
     $c002  ca        DEX
     $c003  e0 02     CPX #$02
     $c005  d0 fb     BNE $c002
+    $c007  00        BRK
 
 The labels don't actually exist in the compiled program, so they can't be
-regenerated when the program is disassembled. The labels only exist in our
+regenerated when the program is disassembled. They only exist in our
 source code so we don't have to hard-code memory addresses like `$c002`.
 
-<!--Next time is branching, looping, and drawing images in a web-based emulator.-->
+Take a look at the hex values in the second column of the disassembly above.
+The first pair is always the opcode (the binary version of the three-letter
+mnemonic/instruction), and the second pair is the argument, when needed. So,
+after assembly `LDX` becomes `$a2`, `DEX` becomes `$ca`, etc. The argument is
+usually passed through untouched. So, `LDX #$08` becomes `a2 08` and `CPX #$02`
+becomes `e0 02`. Some instructions map to more than one opcode. For example,
+`LDX #$08` (load `X` with the hex value `$08`) becomes `a2 08`, but `LDX $08`
+(load `X` with the value stored in memory location `$08`) becomes `a6 08`. This
+makes sense if you think about it - the argument is just the value `$08`, so
+the processor needs to know whether to treat that number as a value or memory
+location.
+
+You might notice that the argument to `BNE` in the assembled code is `fb`, not
+`c002`. This is because the branch instructions take a relative offset. The
+offset takes a signed byte. Unsigned bytes map to decimal numbers like this:
+
+    00        7F 80      FF
+    0        127 128     256
+
+Signed bytes map to decimal numbers like this:
+
+      80      FF 00      7F
+    -128      -1 0       127
+
+So, `fb` means -5. The program counter has already been incremented to the
+next instruction (`$c007`) by the time the branch happens, so a relative offset
+of -5 moves it to `$c002`. Thankfully, both the assembler and the disassembler
+know how to generate these relative offsets, so we don't generally have to
+calculate them.
+
+The only reason it's worth knowing all the intricacies of relative offsets is
+because the argument to a branch instruction can only be one byte. That means
+that the processor is only able to branch back and forward around 128 bytes.
+
+
+
+<h2 id='first-drawing'>Our first drawing</h2>
+
+All this theory gets a bit boring after a while so let's draw some pretty pictures.
+
+
+<!--
+
+Need to know about different addressing modes here - another section?
+
+  LDA #$00
+  STA $00
+  LDA #$02
+  STA $01
+  ; $00 and $01 are now $00 and $02, so will point to memory $0200
+  TXA
+  STA ($00),Y
+
+<h2 id='jumping'>Jumping</h2>
+
+Jumping is like branching with two main differences. First, jumps are not
+conditionally executed, and second, they take a two-byte absolute address. For
+small programs, this second detail isn't very important, as you'll mostly be
+using labels, and the assembler works out the correct memory location from the
+label.
+
+`JMP` is simplest.
+`JSR` pushes location onto stack
+`RTS` returns location from stack
+-->
