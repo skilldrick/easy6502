@@ -1,3 +1,6 @@
 safe: true
 lsi: false
 pygments: true
+markdown: rdiscount
+rdiscount:
+  extensions: [smart]
