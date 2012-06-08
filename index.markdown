@@ -55,11 +55,15 @@ means nothing to you, click on that link there.
 
 ###The assembler
 
-We'll be using the DASM assembler. [Here's a link to download
-it](http://mac.softpedia.com/progDownload/DASM-Download-34013.html). [Here are
+We'll be using the DASM assembler. If you have
+[Homebrew](http://mxcl.github.com/homebrew/) installed with version 0.9 or
+later, installation should be as easy as
+
+    brew install dasm
+
+Otherwise, [here's a link to download
+it](http://mac.softpedia.com/progDownload/DASM-Download-34013.html) and [here are
 some instructions on installing it](http://blog.feltpad.net/dasm-on-mac-osx/).
-TL;DR: unzip, go to the unzipped directory in terminal, run `make`, then copy
-`dasm` in the bin directory to `/usr/bin`.
 
 ###The monitor
 
