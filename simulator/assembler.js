@@ -10,8 +10,6 @@
 */
 
 
-//Show PC as bits
-
 function EmulatorWidget(node) {
   var $node = $(node);
   var ui = UI();
@@ -149,11 +147,15 @@ function EmulatorWidget(node) {
     var ctx;
     var width;
     var height;
+    var pixelSize;
+    var numX = 32;
+    var numY = 32;
 
     function initialize() {
       var canvas = $node.find('.screen')[0];
       width = canvas.width;
       height = canvas.height;
+      pixelSize = width / numX;
       ctx = canvas.getContext('2d');
       reset();
     }
@@ -167,7 +169,7 @@ function EmulatorWidget(node) {
       ctx.fillStyle = palette[memory.get(addr) & 0x0f];
       var y = Math.floor((addr - 0x200) / 32);
       var x = (addr - 0x200) % 32;
-      ctx.fillRect(x * 6, y * 6, 6, 6);
+      ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
     }
 
     return {
@@ -1489,7 +1491,12 @@ function EmulatorWidget(node) {
 
     function updateDebugInfo() {
       var html = "A=$" + num2hex(regA) + " X=$" + num2hex(regX) + " Y=$" + num2hex(regY) + "<br />";
-      html += "P=$" + num2hex(regP) + " SP=$" + addr2hex(regSP) + " PC=$" + addr2hex(regPC);
+      html += "SP=$" + addr2hex(regSP) + " PC=$" + addr2hex(regPC);
+      html += "<br />";
+      html += "NV-BDIZC<br />";
+      for (var i = 7; i >=0; i--) {
+        html += regP >> i & 1;
+      }
       $node.find('.minidebugger').html(html);
     }
 

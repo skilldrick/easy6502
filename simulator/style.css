@@ -2,6 +2,7 @@
   width: 600px;
   margin: 30px auto;
   font-size: 12px;
+  line-height: 1.5;
 }
 
 .buttons {
@@ -12,7 +13,7 @@
   margin: 0 0 6px 0;
   padding: 6px;
   border: 1px solid black;
-  width: 388px;
+  width: 420px;
   height: 290px;
   font-family: monospace;
   overflow: auto;
@@ -28,8 +29,8 @@
   margin-top: 6px;
   padding: 3px;
   padding-top: 8px;
-  height: 93px;
-  width: 184px;
+  height: 125px;
+  width: 152px;
   text-align: center;
   float: right;
 }
@@ -39,7 +40,7 @@
   margin-top: 6px;
   padding: 0;
   font-family: monospace;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .messages {
