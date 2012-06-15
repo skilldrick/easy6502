@@ -1,8 +1,7 @@
 .widget {
   width: 600px;
   margin: 30px auto;
-  font-family: Georgia, serif;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .buttons {
