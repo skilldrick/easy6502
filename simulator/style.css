@@ -1,0 +1,57 @@
+.widget {
+  width: 600px;
+  margin: 30px auto;
+  font-family: Georgia, serif;
+  font-size: 14px;
+}
+
+.buttons {
+  margin: 8px 0;
+}
+
+.code {
+  margin: 0 0 6px 0;
+  padding: 6px;
+  border: 1px solid black;
+  width: 388px;
+  height: 290px;
+  font-family: monospace;
+  overflow: auto;
+  float: left;
+}
+
+.screen {
+  float: right;
+}
+
+.debugger {
+  border: 1px black solid;
+  margin-top: 6px;
+  padding: 3px;
+  padding-top: 8px;
+  height: 93px;
+  width: 184px;
+  text-align: center;
+  float: right;
+}
+
+.minidebugger {
+  margin: 0;
+  margin-top: 6px;
+  padding: 0;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.messages {
+  margin: 0;
+  padding: 6px;
+  border: 1px solid #999;
+  background-color: #eee;
+  overflow: auto;
+  width: 587px;
+  height: 100px;
+  text-align: left;
+  font-size: 12px;
+  color: #444;
+}

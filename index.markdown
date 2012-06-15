@@ -34,6 +34,7 @@ high-level programming languages. So, it was designed to be written by humans.
 More modern assembly languages are meant to written by compilers, so let's
 leave it to them.
 
+{% include widget.html %}
 
 
 <h2 id="getting-started">Getting started</h2>
@@ -52,6 +53,8 @@ will work cross-platform, but the installation instructions might be different.
 Finally, a warning. We'll mainly be representing numbers and memory locations
 in [hexadecimal format](http://en.wikipedia.org/wiki/Hexadecimal). If that
 means nothing to you, click on that link there.
+
+{% include widget.html %}
 
 ###The assembler
 
