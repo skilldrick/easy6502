@@ -1,5 +1,5 @@
 /*
-*  6502 assembler and emulator in Javascript
+*  6502 assembler and simulator in Javascript
 *  (C)2006-2010 Stian Soreng - www.6502asm.com
 *
 *  Adapted by Nick Morgan
@@ -10,40 +10,40 @@
 */
 
 
-function EmulatorWidget(node) {
+function SimulatorWidget(node) {
   var $node = $(node);
   var ui = UI();
   var display = Display();
   var memory = Memory();
   var labels = Labels();
-  var emulator = Emulator();
+  var simulator = Simulator();
   var compiler = Compiler();
 
   function initialize() {
     ui.initialize();
     display.initialize();
-    emulator.reset();
+    simulator.reset();
 
     $node.find('.compileButton').click(function () {
       compiler.compileCode();
     });
-    $node.find('.runButton').click(emulator.runBinary);
-    $node.find('.runButton').click(emulator.stopDebugger);
-    $node.find('.resetButton').click(emulator.reset);
+    $node.find('.runButton').click(simulator.runBinary);
+    $node.find('.runButton').click(simulator.stopDebugger);
+    $node.find('.resetButton').click(simulator.reset);
     $node.find('.hexdumpButton').click(compiler.hexdump);
     $node.find('.debug').change(function () {
       var debug = $(this).is(':checked');
       if (debug) {
         ui.debugOn();
-        emulator.enableDebugger();
+        simulator.enableDebugger();
       } else {
         ui.debugOff();
-        emulator.stopDebugger();
+        simulator.stopDebugger();
       }
     });
-    $node.find('.stepButton').click(emulator.debugExec);
-    $node.find('.gotoButton').click(emulator.gotoAddr);
-    $node.find('.code').keypress(emulator.stop);
+    $node.find('.stepButton').click(simulator.debugExec);
+    $node.find('.gotoButton').click(simulator.gotoAddr);
+    $node.find('.code').keypress(simulator.stop);
     $node.find('.code').keypress(ui.initialize);
     $(document).keypress(memory.storeKeypress);
   }
@@ -218,7 +218,7 @@ function EmulatorWidget(node) {
     };
   }
 
-  function Emulator() {
+  function Simulator() {
     var regA = 0;
     var regX = 0;
     var regY = 0;
@@ -1462,7 +1462,7 @@ function EmulatorWidget(node) {
     }
 
     // execute() - Executes one instruction.
-    //             This is the main part of the CPU emulator.
+    //             This is the main part of the CPU simulator.
     function execute(debugging) {
       if (!codeRunning && !debugging) { return; }
 
@@ -1737,7 +1737,7 @@ function EmulatorWidget(node) {
     // compileCode()
     // "Compiles" the code into memory
     function compileCode() {
-      emulator.reset();
+      simulator.reset();
       labels.reset();
       defaultCodePC = 0x600;
       $node.find('.messages').empty();
@@ -1758,7 +1758,7 @@ function EmulatorWidget(node) {
       labels.displayMessage();
 
       defaultCodePC = 0x600;
-      message("Compiling code..");
+      message("Compiling code ...");
 
       codeLen = 0;
       for (var i = 0; i < lines.length; i++) {
@@ -2227,6 +2227,6 @@ function EmulatorWidget(node) {
 
 $(document).ready(function () {
   $('.widget').each(function () {
-    EmulatorWidget(this);
+    SimulatorWidget(this);
   });
 });

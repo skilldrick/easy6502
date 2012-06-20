@@ -4,14 +4,17 @@ layout: default
 
 <h2 id="intro">Introduction</h2>
 
-I'm going to show you how to get started writing 6502 assembly language, the
-language used to program the processor used by famous computers like the [BBC
-Micro](http://en.wikipedia.org/wiki/BBC_Micro), [Atari
-2600](http://en.wikipedia.org/wiki/Atari_2600), [Commodore
-VIC-20](http://en.wikipedia.org/wiki/Commodore_VIC-20) and [Commodore
-64](http://en.wikipedia.org/wiki/Commodore_64). Bender in Futurama [has a 6502
-processor for a brain](http://www.transbyte.org/SID/SID-files/Bender_6502.jpg).
-[Even the Terminator was programmed in 6502](http://www.pagetable.com/docs/terminator/00-37-23.jpg).
+In this tiny ebook I'm going to show you how to get started writing 6502
+assembly language. The 6502 processor was massive in the seventies and
+eighties, powering famous computers like the
+[BBC Micro](http://en.wikipedia.org/wiki/BBC_Micro),
+[Atari 2600](http://en.wikipedia.org/wiki/Atari_2600),
+[Commodore 64](http://en.wikipedia.org/wiki/Commodore_64), and the [Nintendo Entertainment
+System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System). Bender in
+Futurama [has a 6502 processor for a
+brain](http://www.transbyte.org/SID/SID-files/Bender_6502.jpg). [Even the
+Terminator was programmed in
+6502](http://www.pagetable.com/docs/terminator/00-37-23.jpg).
 
 So, why would you want to learn 6502? It's a dead language isn't it? Well,
 yeah, but so's Latin. And they still teach that.
@@ -32,14 +35,210 @@ your thinking. 6502 was written in a different age, a time when the majority of
 developers were writing assembly directly, rather than in these new-fangled
 high-level programming languages. So, it was designed to be written by humans.
 More modern assembly languages are meant to written by compilers, so let's
-leave it to them.
+leave it to them. Plus, 6502 is *fun*. Nobody ever called x86 *fun*.
+
+
+<h2 id="first-program">Our first program</h2>
+
+So, let's dive in! That thing below is a little [JavaScript 6502 compiler and
+emulator](https://github.com/skilldrick/6502js) that I adapted for this book.
+Click **Compile** then **Run** to compile and run the snippet of assembly language.
+
+{% include start.html %}
+LDA #$01
+STA $0200
+LDA #$05
+STA $0201
+LDA #$08
+STA $0202
+{% include end.html %}
+
+Hopefully the black area on the right now has three coloured "pixels" at the
+top left. (If this doesn't work, you'll probably need to upgrade your browser to
+something more modern, like Chrome or Firefox.)
+
+So, what's this program actually doing? Let's step through it with the
+debugger. Hit **Reset**, then check the **Debugger** checkbox to start the
+debugger. Click **Step** once. If you were watching carefully, you'll have
+noticed that `A=` changed from `$00` to `$01`, and `PC=` changed from `$0600` to
+`$0602`.
+
+Any numbers prefixed with `$` in 6502 assembly language (and by extension, in
+this book) are in hexadicmal (hex) format. If you're not familiar with hex
+numbers, I recommend you read [the Wikipedia
+article](http://en.wikipedia.org/wiki/Hexadecimal). Anything prefixed with `#`
+is a literal number value. Any other number refers to a memory location.
+
+Equipped with that knowledge, you should be able to see that the instruction
+`LDA #$01` loads the hex value `$01` into register `A`. I'll go into more
+detail on registers in the next section.
+
+Press **Step** again to execute the second instruction. The top-left pixel of
+the simulator display should now be white. This simulator uses the memory
+locations `$0200` to `$05ff` to draw pixels on its display. The values `$00` to
+`$0f` represent 16 different colours (`$00` is black and `$01` is white), so
+storing the value `$01` at memory location `$0200` draws a white pixel at the
+top left corner. This is simpler than how an actual computer would output
+video, but it'll do for now.
+
+So, the instruction `STA $0200` stores the value of the `A` register to memory
+location `$0200`. Click **Step** four more times to execute the rest of the
+instructions, keeping an eye on the `A` register as it changes.
+
+###Exercises###
+
+1. Try changing the colour of the three pixels.
+2. Change one of the pixels to draw at the bottom-right corner (memory location `$05ff`).
+3. Add more instructions to draw extra pixels.
+
+
+<h2 id='registers'>Registers and flags</h2>
+
+We've already had a little look at the processor status section (the bit with
+`A`, `PC` etc.), but what does it all mean?
+
+The first line shows the `A`, `X` and `Y` registers (`A` is often called the
+"accumulator"). Each register holds a single byte. Most operations work on the
+contents of these registers.
+
+`SP` is the stack pointer. I won't get into the stack yet, but basically this
+register is decremented every time a byte is pushed onto the stack, and
+incremented when a byte is popped off the stack.
+
+`PC` is the program counter - it's how the processor knows at what point in the
+program it currently is. It's like the current line number of an executing
+script. In the JavaScript simulator the code is compiled starting at memory
+location `$0600`, so `PC` always starts there.
+
+The last section shows the processor flags. Each flag is one bit, so all seven
+flags live in a single byte. The flags are set by the processor to give
+information about the previous instruction. More on that later. [Read more
+about the registers and flags here](http://www.obelisk.demon.co.uk/6502/registers.html).
+
+
+<h2 id='instructions'>Instructions</h2>
+
+Instructions in assembly language are like a small set of predefined functions.
+All instructions take zero or one arguments. Here's some annotated
+source code to introduce a few different instructions:
+
+{% include start.html %}
+LDA #$c0  ;Load the hex value $c0 into the A register
+TAX       ;Transfer the value in the A register to X
+INX       ;Increment the value in the X register
+ADC #$c4  ;Add the hex value $cc to the A register
+BRK       ;Break - we're done
+{% include end.html %}
+
+Compile the code, then turn on the debugger and step through the code, watching
+the `A` and `X` registers. Something slightly odd happens on the line `ADC #$c4`.
+You might expect that adding `$c4` to `$c0` would give $184, but this
+processor gives the result as `$84`. What's up with that?
+
+The problem is, `$184` is too big to fit in a single byte (the max is `$FF`),
+and the registers can only hold a single byte.  It's OK though; the processor
+isn't actually dumb. If you were looking carefully enough, you'll have noticed
+that the carry flag was set to `1` after this operation. So that's how you
+know.
+
+In the simulator below **type** (don't paste) the following code:
+
+    LDA #$80
+    STA $01
+    ADC $01
 
 {% include widget.html %}
 
+An important thing to notice here is the distinction between `ADC #$01` and
+`ADC $01`. The first one adds the value `$01` to the `A` register, but the
+second adds the value stored at memory location `$01` to the `A` register.
 
-<h2 id="getting-started">Getting started</h2>
+Compile, then step through these three instructions. `STA $01` stores the value
+of the `A` register at memory location `$01`, and `ADC $01` adds the value
+stored at the memory location `$01` to the `A` register. `$80 + $80` should
+equal `$100`, but because this is bigger than a byte, the `A` register is set
+to `$00` and the carry flag is set. As well as this though, the zero flag is
+set. The zero flag is set by all instructions where the result is zero.
 
-Hopefully by this point I've persuaded you that this is going to be worth it.
+A [full list of the 6502 instruction set is available
+here](http://www.6502.org/tutorials/6502opcodes.html) [and
+here](http://www.obelisk.demon.co.uk/6502/reference.html) (I usually refer to
+both pages as they have their strengths and weaknesses). These pages detail the
+arguments to each instruction, which registers they use, and which flags they
+set. They are your bible.
+
+###Exercises###
+
+1. You've seen `TAX`. You can probably guess what `TAY`, `TXA` and `TYA` do,
+   but write some code to test your assumptions.
+2. Rewrite the first example in this section to use the `Y` register instead of
+   the `X` register.
+3. The opposite of `ADC` is `SBC` (subtract with carry). Write a program that
+   uses this instruction.
+
+
+<h2 id='branching'>Branching</h2>
+
+So far we're only able to write basic programs without any branching logic.
+Let's change that.
+
+6502 assembly language has a bunch of branching instructions, all of which
+branch based on whether certain flags are set or not. In this example we'll be
+looking at `BNE`: "Branch on not equal".
+
+{% include start.html %}
+  LDX #$08
+decrement:
+  DEX
+  STX $0200
+  CPX #$03
+  BNE decrement
+  STX $0201
+  BRK
+{% include end.html %}
+
+First we load the value `$08` into the `X` register. The next line is a label.
+Labels just mark certain points in a program so we can return to them later.
+After the label we decrement `X`, store it to `$0200` (the top-left pixel), and
+then compare it to the value `$03`.
+[`CPX`](http://www.obelisk.demon.co.uk/6502/reference.html#CPX) compares the
+value in the `X` register with another value. If the two values are equal, the
+`Z` flag is set to `1`, otherwise it is set to `0`.
+
+The next line, `BNE decrement`, will shift execution to the decrement label if
+the `Z` flag is set to `0` (meaning that the two values in the `CPX` comparison
+were not equal), otherwise it does nothing and we store `X` to `$0201`, then
+finish the program.
+
+In assembly language, you'll usually use labels with branch instructions. When
+compiled though, this label is converted to a single-byte relative offset (a
+number of bytes to go backwards or forwards from the next instruction) so
+branch instructions can only go forward and back around 256 bytes. This means
+they can only be used to move around local code. For moving further you'll need
+to use the jumping instructions.
+
+###Exercises###
+
+1. The opposite of `BNE` is `BEQ`. Try writing a program that uses `BEQ`.
+2. `BCC` and `BCS` ("branch on carry clear" and "branch on carry set") are used
+   to branch on the carry flag. Write a program that uses one of these two.
+
+
+<h2 id='jumping'>Jumping</h2>
+
+Jumping is like branching with two main differences. First, jumps are not
+conditionally executed, and second, they take a two-byte absolute address. For
+small programs, this second detail isn't very important, as you'll mostly be
+using labels, and the assembler works out the correct memory location from the
+label.
+
+* `JMP` is simplest.
+* `JSR` pushes location onto stack
+* `RTS` returns location from stack
+
+
+<!-- This section is all about installing software. Let's leave that till it's necessary.
+
 There are a few things you'll want on your computer in order to get up and
 running.  The first is an assembler. This is the program that converts your
 assembly language into machine code. The second is a monitor. This is like a
@@ -54,7 +253,7 @@ Finally, a warning. We'll mainly be representing numbers and memory locations
 in [hexadecimal format](http://en.wikipedia.org/wiki/Hexadecimal). If that
 means nothing to you, click on that link there.
 
-{% include widget.html %}
+
 
 ###The assembler
 
@@ -77,8 +276,6 @@ should just be able to install it with
     easy_install -U py65
 
 but if you have trouble [go to the Github page](https://github.com/mnaberez/py65).
-
-
 
 <h2 id="first-program">Our first program</h2>
 
@@ -180,130 +377,11 @@ the code. Once you've finished, we'll have stored the values `$01`, `$0a` and
 `$0f` into memory locations `$01`, `$02` and `$03`. Pretty awesome eh? You
 can't do *that* in JavaScript!
 
-
-
-<h2 id='registers'>Registers and flags</h2>
-
-When you run the py65 monitor you'll constantly see output like this:
-
-           PC  AC XR YR SP NV-BDIZC
-    6502: 0000 00 00 00 ff 00110000
-
-So, what does all this mean? `PC` is the program counter - it's how the
-processor knows at what point in the program it currently is. It's like the
-current line number of an executing script.
-
-`AC`, `XR` and `YR` are the `A`, `X` and `Y` registers (`A` is often called the
-"accumulator"). Each register holds a single byte. Most operations work on the
-contents of these registers.
-
-`SP` is the stack pointer. I won't get into the stack yet, but basically this
-register is decremented every time a byte is pushed onto the stack, and
-incremented when a byte is popped off the stack.
-
-The last section shows the processor flags. Each flag is one bit, so all seven
-flags live in a single byte.  The flags are set by the processor to give
-information about the previous instruction. More on that later. [Read more
-about the registers and flags
-here](http://www.obelisk.demon.co.uk/6502/registers.html).
+-->
 
 
 
-<h2 id='instructions'>Instructions</h2>
-
-Instructions in assembly language are like a small set of predefined functions.
-All instructions take between zero and three arguments. Here's some annotated
-source code to introduce a few different instructions:
-
-      processor 6502 ;Set the processor (compiler instruction)
-      ORG $c000      ;Set the memory origin to c000 (compiler instruction)
-
-      LDA #$c0       ;Load the hex value $c0 into the A register
-      TAX            ;Transfer the value in the A register to the X register
-      INX            ;Increment the value in the X register
-      STA $01        ;Store the value of the A register at memory location $01
-      ADC #$c0       ;Add the hex value $c0 to the A register
-      STA $02        ;Store the value of the A register at memory location $02
-      BRK            ;Break - we're done
-
-As before, put this in a text editor (with a two-space indent), and compile it
-with `dasm example.asm -f3 -v1 -oexample.bin`. Then load it into `py65mon`
-using `.load example.bin c000`, and set the program counter to the start of the
-code with `.registers pc=c000`.  Now step through the code, paying special
-attention to what happens when you execute the instruction `ADC #$c0`.
-According to this processor, `$C0 + $C0 = $80`. Huh? If you open up OSX
-calculator and change the view to "Programmer" you can see what the actual
-result of `$C0 + $C0` is (it's `$180`).
-
-So why does the processor give the wrong answer? The problem is, `$180` is too
-big to fit in a single byte (the max is `$FF`), and the registers can only hold
-a single byte.  It's OK though; the processor isn't actually dumb. If you were
-looking carefully enough, you'll have noticed that the carry flag was set to
-`1` after this operation. So that's how you know.
-
-Still in the monitor, type the following commands:
-
-    .reset
-    .registers pc=c000
-    .assemble
-
-The monitor is now in assemble mode, and will treat all input as assembly
-language. Type in the following:
-
-    LDA #$80
-    STA #01
-    ADC $01
-
-Press enter again to finish entering assembly language. An important thing to
-notice here is the distinction between `ADC #$01` and `ADC $01`. The first one
-adds the value `$01` to the `A` register, but the second adds the value stored
-at memory location `$01` to the `A` register.
-
-Now, step through these three instructions. `$80 + $80` should equal `$100`,
-but because this is bigger than a byte, the `A` register is set to `$00` and
-the carry flag is set. As well as this though, the zero flag is set. The zero
-flag is set by all instructions where the result is zero.
-
-A [full list of the 6502 instruction set is available
-here](http://www.6502.org/tutorials/6502opcodes.html) [and
-here](http://www.obelisk.demon.co.uk/6502/reference.html) (I usually refer to
-both pages as they have their strengths and weaknesses). These pages detail the
-arguments to each instruction, which registers they use, and which flags they
-set. They are your bible.
-
-
-
-<h2 id='branching'>Branching</h2>
-
-So far we're only able to write basic programs without any branching logic.
-Let's change that.
-
-6502 assembly language has a bunch of branching instructions, all of which
-branch based on whether certain flags are set or not. In this example we'll be
-looking at `BNE`: "Branch on not equal".
-
-      processor 6502
-      ORG $c000
-
-      LDX #$08
-
-    decrement:
-      DEX
-      CPX #$02
-      BNE decrement
-      BRK
-
-First we load the value `$08` into the `X` register. The next line is a label.
-Labels just mark certain points in a program so we can return to them later.
-After the label we decrement `X`, and then compare it to the value `$02`.
-[`CPX`](http://www.obelisk.demon.co.uk/6502/reference.html#CPX) compares the
-value in the `X` register with another value. If the two values are equal,
-the `Z` flag is set to `1`, otherwise it is set to `0`.
-
-The next line, `BNE decrement`, will shift execution to the decrement label if
-the `Z` flag is set to `0` (meaning that the two values in the `CPX` comparison
-were not equal), otherwise it does nothing and we reach the end of
-the program.
+<!-- This section is all about relative offsets - let's not muddy the waters yet
 
 The disassembly of this program looks like this:
 
@@ -331,12 +409,12 @@ location.
 
 You might notice that the argument to `BNE` in the assembled code is `fb`, not
 `c002`. This is because the branch instructions take a relative offset. The
-offset takes a signed byte. Unsigned bytes map to decimal numbers like this:
+offset takes a signed byte. *Unsigned* bytes map to decimal numbers like this:
 
     00        7F 80      FF
     0        127 128     256
 
-Signed bytes map to decimal numbers like this:
+*Signed* bytes map to decimal numbers like this:
 
       80      FF 00      7F
     -128      -1 0       127
@@ -351,34 +429,4 @@ The only reason it's worth knowing all the intricacies of relative offsets is
 because the argument to a branch instruction can only be one byte. That means
 that the processor is only able to branch back and forward around 128 bytes.
 
-
-
-<h2 id='first-drawing'>Our first drawing</h2>
-
-All this theory gets a bit boring after a while so let's draw some pretty pictures.
-
-
-<!--
-
-Need to know about different addressing modes here - another section?
-
-  LDA #$00
-  STA $00
-  LDA #$02
-  STA $01
-  ; $00 and $01 are now $00 and $02, so will point to memory $0200
-  TXA
-  STA ($00),Y
-
-<h2 id='jumping'>Jumping</h2>
-
-Jumping is like branching with two main differences. First, jumps are not
-conditionally executed, and second, they take a two-byte absolute address. For
-small programs, this second detail isn't very important, as you'll mostly be
-using labels, and the assembler works out the correct memory location from the
-label.
-
-`JMP` is simplest.
-`JSR` pushes location onto stack
-`RTS` returns location from stack
 -->
