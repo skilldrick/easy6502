@@ -132,7 +132,7 @@ BRK       ;Break - we're done
 
 Compile the code, then turn on the debugger and step through the code, watching
 the `A` and `X` registers. Something slightly odd happens on the line `ADC #$c4`.
-You might expect that adding `$c4` to `$c0` would give $184, but this
+You might expect that adding `$c4` to `$c0` would give `$184`, but this
 processor gives the result as `$84`. What's up with that?
 
 The problem is, `$184` is too big to fit in a single byte (the max is `$FF`),
@@ -224,13 +224,164 @@ to use the jumping instructions.
    to branch on the carry flag. Write a program that uses one of these two.
 
 
+<h2 id='addressing'>Addressing modes</h2>
+
+The 6502 uses a 16-bit address bus, meaning that there are 65536 bytes of
+memory available to the processor. Remember that a byte is represented by two
+hex characters, so the memory locations are generally represented as `$0000 -
+$ffff`.
+
+###Absolute###
+
+With absolute addressing, the full memory location is used as the argument to the instruction. For example:
+
+    STA $c000 ;Store the value in the accumulator at memory location $c000
+
+###Zero page###
+
+All instructions that support absolute addressing (with the exception of the jump
+instructions) also have the option to take a single-byte address. This type of
+addressing is called "zero page" - only the first page (the first 256 bytes) of
+memory is accessible. This is faster, as only one byte needs to be looked up,
+and takes up less space in the compiled code as well.
+
+###Zero page,X###
+
+This is where addressing gets interesting. In this mode, a zero page address is given, and then the value of the `X` register is added. Here is an example:
+
+    LDX #$01   ;X is $01
+    LDA #$aa   ;A is $aa
+    STA #$a0,X ;Store the value of A at memory location $a1
+    INX        ;Increment X
+    STA #$a0,X ;Store the value of A at memory location $a2
+
+If the result of the addition is larger than a single byte, the address wraps around. For example:
+
+    LDX #$05
+    STA #$ff,X ;Store the value of A at memory location $04
+
+###Zero page,Y###
+
+This is the equivalent of zero page,X, but can only be used with `LDX` and `STX`.
+
+###Absolute,X and absolute,Y###
+
+These are the absolute addressing versions of zero page,X and zero page,Y. For example:
+
+    LDX #$01
+    STA $0200,X ;Store the value of A at memory location $0201
+
+###Immediate###
+
+Immediate addressing doesn't strictly deal with memory addresses - this is the
+mode where actual values are used. For example, `LDX #$01` loads the value
+`$01` into the `X` register. This is very different to the zero page
+instruction `LDX $01` which loads the value at memory location `$01` into the
+`X` register.
+
+###Relative###
+
+Relative addressing is used for branching instructions. These instructions take
+a single byte, which is used as an offset from the following instruction.
+
+Compile the following code, then click the **Hexdump** button to see the compiled code.
+
+{% include start.html %}
+  LDA #$01
+  CMP #$02
+  BNE notequal
+  STA $22
+notequal:
+  BRK
+{% include end.html %}
+
+The hex should look something like this:
+
+    a9 01 c9 02 d0 02 85 22 00
+
+`a9` and `c9` are the processor opcodes for immediate-addressed `LDA` and `CMP`
+respectively. `01` and `02` are the arguments to these instructions. `d0` is
+the opcode for `BNE`, and its argument is `02`. This means "skip over the next
+two bytes" (`85 22`, the compiled version of `STA $22`). Try editing the code
+so `STA` takes a two-byte absolute address rather than a single-byte zero page
+address (e.g. change `STA $22` to `STA $2222`). Recompile the code and look at
+the hexdump again - the argument to `BNE` should now be `03`, because the
+instruction the processor is skipping past is now three bytes long.
+
+###Implicit###
+
+Some instructions don't deal with memory locations (e.g. `INX` - increment the
+`X` register). These are said to have implicit addressing - the argument is
+implied by the instruction.
+
+###Indirect###
+
+Indirect addressing uses an absolute address to look up another address. The
+first address gives the least significant byte of the address, and the
+following byte gives the most significant byte. That can be hard to wrap your
+head around, so here's an example:
+
+{% include start.html %}
+LDA #$01
+STA $f0
+LDA #$cc
+STA $f1
+JMP ($00f0) ;dereferences to $cc01
+{% include end.html %}
+
+In this example, `$f0` contains the value `$01` and `$f1` contains the value
+`$cc`. The instruction `JMP ($f0)` causes the processor to look up the two
+bytes at `$f0` and `$f1`, and put them together to form the address `$cc01`
+which becomes the new program counter. Compile and step through the program
+above to see what happens.
+
+###Indexed indirect###
+
+
+###Indirect indexed###
+
+
+
+<h2 id='stack'>The stack</h2>
+
+The stack in a 6502 processor is just like any other stack - values are pushed
+onto it and popped ("pulled" in 6502 parlance) off it. The current depth of the
+stack is measured by the stack pointer, a special register. The stack lives in
+memory between `$0100` and `$01ff`. The stack pointer is initially `$ff`, which
+points to memory location `$01ff`. When a byte is pushed onto the stack, the
+stack pointer becomes `$fe`, or memory location `$01fe`, and so on.
+
+<!-- Talk about the stack operations, looping through and pushing colours, then looping and popping -->
+
+
 <h2 id='jumping'>Jumping</h2>
 
 Jumping is like branching with two main differences. First, jumps are not
 conditionally executed, and second, they take a two-byte absolute address. For
 small programs, this second detail isn't very important, as you'll mostly be
 using labels, and the assembler works out the correct memory location from the
-label.
+label. For larger programs though, jumping is the only way to move from one
+section of the code to another.
+
+###JMP###
+
+`JMP` is an unconditional jump. Here's a really simple example to show it in action:
+
+
+{% include start.html %}
+  LDA #$03
+  JMP there
+  BRK
+  BRK
+  BRK
+there:
+  STA $0200
+{% include end.html %}
+
+
+###JSR/RTS###
+
+`JSR` and `RTS` ("jump to subroutine" and "return from subroutine") are a dynamic duo that you'll usually see used together. `JSR`
 
 * `JMP` is simplest.
 * `JSR` pushes location onto stack
