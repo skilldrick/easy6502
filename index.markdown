@@ -333,7 +333,8 @@ In this example, `$f0` contains the value `$01` and `$f1` contains the value
 `$cc`. The instruction `JMP ($f0)` causes the processor to look up the two
 bytes at `$f0` and `$f1`, and put them together to form the address `$cc01`
 which becomes the new program counter. Compile and step through the program
-above to see what happens.
+above to see what happens. I'll talk more about `JMP` in the section on
+[Jumping](#jumping).
 
 ###Indexed indirect###
 
