@@ -229,15 +229,15 @@ to use the jumping instructions.
 The 6502 uses a 16-bit address bus, meaning that there are 65536 bytes of
 memory available to the processor. Remember that a byte is represented by two
 hex characters, so the memory locations are generally represented as `$0000 -
-$ffff`.
+$ffff`. There are various ways to refer to these memory locations, as detailed below.
 
-###Absolute###
+###Absolute: `$c000`###
 
 With absolute addressing, the full memory location is used as the argument to the instruction. For example:
 
     STA $c000 ;Store the value in the accumulator at memory location $c000
 
-###Zero page###
+###Zero page: `$c0`###
 
 All instructions that support absolute addressing (with the exception of the jump
 instructions) also have the option to take a single-byte address. This type of
@@ -245,33 +245,33 @@ addressing is called "zero page" - only the first page (the first 256 bytes) of
 memory is accessible. This is faster, as only one byte needs to be looked up,
 and takes up less space in the compiled code as well.
 
-###Zero page,X###
+###Zero page,X: `$c0,X`###
 
 This is where addressing gets interesting. In this mode, a zero page address is given, and then the value of the `X` register is added. Here is an example:
 
     LDX #$01   ;X is $01
     LDA #$aa   ;A is $aa
-    STA #$a0,X ;Store the value of A at memory location $a1
+    STA $a0,X ;Store the value of A at memory location $a1
     INX        ;Increment X
-    STA #$a0,X ;Store the value of A at memory location $a2
+    STA $a0,X ;Store the value of A at memory location $a2
 
 If the result of the addition is larger than a single byte, the address wraps around. For example:
 
     LDX #$05
-    STA #$ff,X ;Store the value of A at memory location $04
+    STA $ff,X ;Store the value of A at memory location $04
 
-###Zero page,Y###
+###Zero page,Y: `$c0,Y`###
 
 This is the equivalent of zero page,X, but can only be used with `LDX` and `STX`.
 
-###Absolute,X and absolute,Y###
+###Absolute,X and absolute,Y: `$c000,X` and `$c000,Y`###
 
 These are the absolute addressing versions of zero page,X and zero page,Y. For example:
 
     LDX #$01
     STA $0200,X ;Store the value of A at memory location $0201
 
-###Immediate###
+###Immediate: `#$c0`###
 
 Immediate addressing doesn't strictly deal with memory addresses - this is the
 mode where actual values are used. For example, `LDX #$01` loads the value
@@ -279,7 +279,7 @@ mode where actual values are used. For example, `LDX #$01` loads the value
 instruction `LDX $01` which loads the value at memory location `$01` into the
 `X` register.
 
-###Relative###
+###Relative: `$c0` (or label)###
 
 Relative addressing is used for branching instructions. These instructions take
 a single byte, which is used as an offset from the following instruction.
@@ -314,7 +314,7 @@ Some instructions don't deal with memory locations (e.g. `INX` - increment the
 `X` register). These are said to have implicit addressing - the argument is
 implied by the instruction.
 
-###Indirect###
+###Indirect: `($c000)`###
 
 Indirect addressing uses an absolute address to look up another address. The
 first address gives the least significant byte of the address, and the
@@ -331,16 +331,62 @@ JMP ($00f0) ;dereferences to $cc01
 
 In this example, `$f0` contains the value `$01` and `$f1` contains the value
 `$cc`. The instruction `JMP ($f0)` causes the processor to look up the two
-bytes at `$f0` and `$f1`, and put them together to form the address `$cc01`
-which becomes the new program counter. Compile and step through the program
-above to see what happens. I'll talk more about `JMP` in the section on
-[Jumping](#jumping).
+bytes at `$f0` and `$f1` (`$01` and `$cc`) and put them together to form the
+address `$cc01`, which becomes the new program counter. Compile and step
+through the program above to see what happens. I'll talk more about `JMP` in
+the section on [Jumping](#jumping).
 
-###Indexed indirect###
+###Indexed indirect: `($c0,X)`###
+
+This one's kinda weird. It's like a cross between zero page,X and indirect.
+Basically, you take the zero page address, add the value of the `X` register to
+it, then use that to look up a two-byte address. For example:
+
+{% include start.html %}
+LDX #$01
+LDA #$05
+STA $01
+LDA #$06
+STA $02
+LDY #$0a
+STY $0605
+LDA ($00,X)
+{% include end.html %}
+
+Memory locations `$01` and `$02` contain the values `$05` and `$06`
+respectively. Think of `($00,X)` as `($00 + X)`. In this case `X` is `$01`, so
+this simplifies to `($01)`. From here things proceed like standard indirect
+addressing - the two bytes at `$01` and `$02` (`$05` and `$06`) are looked up
+to form the address `$0605`.  This is the address that the `Y` register was
+stored into in the previous instruction, so the `A` register gets the same
+value as `Y`, albeit through a much more circuitous route. You won't see this
+much.
 
 
-###Indirect indexed###
+###Indirect indexed: `($c0),Y`###
 
+Indirect indexed is like indexed indirect but less insane. Instead of adding
+the `X` register to the address *before* dereferencing, the zero page address
+is dereferenced, and the `Y` register is added to the resulting address.
+
+{% include start.html %}
+LDY #$01
+LDA #$03
+STA $01
+LDA #$07
+STA $02
+LDX #$0a
+STX $0704
+LDA ($01),Y
+{% include end.html %}
+
+In this case, `($01)` looks up the two bytes at `$01` and `$02`: `$03` and
+`$07`. These form the address `$0703`. The value of the `Y` register is added
+to this address to give the final address `$0704`.
+
+###Exercise###
+
+1. Try to write code snippets that use each of the 6502 addressing modes.
 
 
 <h2 id='stack'>The stack</h2>
