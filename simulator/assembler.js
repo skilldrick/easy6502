@@ -1832,9 +1832,9 @@ function SimulatorWidget(node) {
 
       command = command.toUpperCase();
 
-      if (input.match(/^\*[\s]*=[\s]*[\$]?[0-9a-f]*$/)) {
+      if (input.match(/^\*\s*=\s*\$?[0-9a-f]*$/)) {
         // equ spotted
-        param = input.replace(/^[\s]*\*[\s]*=[\s]*/, "");
+        param = input.replace(/^\s*\*\s*=\s*/, "");
         if (param[0] === "$") {
           param = param.replace(/^\$/, "");
           addr = parseInt(param, 16);
@@ -2159,7 +2159,7 @@ function SimulatorWidget(node) {
       }
       if (param.match(/^[0-9]{1,5}$/i)) {  // Thanks, Matt!
         value = parseInt(param, 10);
-        if (value < 0 || value > 65535) { return false; }
+        if (value < 0 || value > 0xffff) { return false; }
         pushWord(value);
         return(true);
       }

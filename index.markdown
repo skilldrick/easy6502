@@ -160,9 +160,9 @@ equal `$100`, but because this is bigger than a byte, the `A` register is set
 to `$00` and the carry flag is set. As well as this though, the zero flag is
 set. The zero flag is set by all instructions where the result is zero.
 
-A [full list of the 6502 instruction set is available
-here](http://www.6502.org/tutorials/6502opcodes.html) [and
-here](http://www.obelisk.demon.co.uk/6502/reference.html) (I usually refer to
+A full list of the 6502 instruction set is [available
+here](http://www.6502.org/tutorials/6502opcodes.html) and
+[here](http://www.obelisk.demon.co.uk/6502/reference.html) (I usually refer to
 both pages as they have their strengths and weaknesses). These pages detail the
 arguments to each instruction, which registers they use, and which flags they
 set. They are your bible.
@@ -398,7 +398,33 @@ memory between `$0100` and `$01ff`. The stack pointer is initially `$ff`, which
 points to memory location `$01ff`. When a byte is pushed onto the stack, the
 stack pointer becomes `$fe`, or memory location `$01fe`, and so on.
 
-<!-- Talk about the stack operations, looping through and pushing colours, then looping and popping -->
+Two of the stack instructions are `PHA` and `PLA`, "push accumulator" and "pull
+accumulator". Below is an example of these two in action.
+
+{% include start.html %}
+  LDX #$00
+  LDY #$00
+firstloop:
+  TXA
+  STA $0200,Y
+  PHA
+  INX
+  INY
+  CPY #$10
+  BNE firstloop ;loop until Y is $10
+secondloop:
+  PLA
+  STA $0200,Y
+  INY
+  CPY #$20      ;loop until Y is $20
+  BNE secondloop
+{% include end.html %}
+
+`X` holds the pixel colour, and `Y` holds the position of the current pixel.
+The first loop draws the current colour as a pixel (via the `A` register),
+pushes the colour to the stack, then increments the colour and position.  The
+second loop pops the stack, draws the popped colour as a pixel, then increments
+the position. As should be expected, this creates a mirrored pattern.
 
 
 <h2 id='jumping'>Jumping</h2>
@@ -414,7 +440,6 @@ section of the code to another.
 
 `JMP` is an unconditional jump. Here's a really simple example to show it in action:
 
-
 {% include start.html %}
   LDA #$03
   JMP there
@@ -428,12 +453,40 @@ there:
 
 ###JSR/RTS###
 
-`JSR` and `RTS` ("jump to subroutine" and "return from subroutine") are a dynamic duo that you'll usually see used together. `JSR`
+`JSR` and `RTS` ("jump to subroutine" and "return from subroutine") are a
+dynamic duo that you'll usually see used together. `JSR` is used to jump from
+the current location to another part of the code. `RTS` returns to the previous
+position. This is basically like calling a function and returning.
 
-* `JMP` is simplest.
-* `JSR` pushes location onto stack
-* `RTS` returns location from stack
+The processor knows where to return to because `JSR` pushes the address minus
+one of the next instruction onto the stack before jumping to the given
+location. `RTS` pops this location, adds one to it, and jumps to that location.
+An example:
 
+{% include start.html %}
+  JSR init
+  JSR loop
+  JSR end
+
+init:
+  LDX #$00
+  RTS
+
+loop:
+  INX
+  CPX #$05
+  BNE loop
+  RTS
+
+end:
+  BRK
+{% include end.html %}
+
+The first instruction causes execution to jump to the `init` label. This sets
+`X`, then returns to the next instruction, `JSR loop`. This jumps to the `loop`
+label, which increments `X` until it is equal to `$05`. After that we return to
+the next instruction, `JSR end`, which jumps to the end of the file. This
+illustrates how `JSR` and `RTS` can be used together to create modular code.
 
 <!-- This section is all about installing software. Let's leave that till it's necessary.
 
@@ -579,52 +632,3 @@ can't do *that* in JavaScript!
 
 
 
-<!-- This section is all about relative offsets - let's not muddy the waters yet
-
-The disassembly of this program looks like this:
-
-    $c000  a2 08     LDX #$08
-    $c002  ca        DEX
-    $c003  e0 02     CPX #$02
-    $c005  d0 fb     BNE $c002
-    $c007  00        BRK
-
-The labels don't actually exist in the compiled program, so they can't be
-regenerated when the program is disassembled. They only exist in our
-source code so we don't have to hard-code memory addresses like `$c002`.
-
-Take a look at the hex values in the second column of the disassembly above.
-The first pair is always the opcode (the binary version of the three-letter
-mnemonic/instruction), and the second pair is the argument, when needed. So,
-after assembly `LDX` becomes `$a2`, `DEX` becomes `$ca`, etc. The argument is
-usually passed through untouched. So, `LDX #$08` becomes `a2 08` and `CPX #$02`
-becomes `e0 02`. Some instructions map to more than one opcode. For example,
-`LDX #$08` (load `X` with the hex value `$08`) becomes `a2 08`, but `LDX $08`
-(load `X` with the value stored in memory location `$08`) becomes `a6 08`. This
-makes sense if you think about it - the argument is just the value `$08`, so
-the processor needs to know whether to treat that number as a value or memory
-location.
-
-You might notice that the argument to `BNE` in the assembled code is `fb`, not
-`c002`. This is because the branch instructions take a relative offset. The
-offset takes a signed byte. *Unsigned* bytes map to decimal numbers like this:
-
-    00        7F 80      FF
-    0        127 128     256
-
-*Signed* bytes map to decimal numbers like this:
-
-      80      FF 00      7F
-    -128      -1 0       127
-
-So, `fb` means -5. The program counter has already been incremented to the
-next instruction (`$c007`) by the time the branch happens, so a relative offset
-of -5 moves it to `$c002`. Thankfully, both the assembler and the disassembler
-know how to generate these relative offsets, so we don't generally have to
-calculate them.
-
-The only reason it's worth knowing all the intricacies of relative offsets is
-because the argument to a branch instruction can only be one byte. That means
-that the processor is only able to branch back and forward around 128 bytes.
-
--->
