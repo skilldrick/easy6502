@@ -9,6 +9,10 @@
   margin: 8px 0;
 }
 
+.start, .length {
+  width: 50px;
+}
+
 .code {
   margin: 0 0 6px 0;
   padding: 6px;
@@ -41,6 +45,28 @@
   padding: 0;
   font-family: monospace;
   font-size: 11px;
+}
+
+.monitorControls {
+  width: 587px;
+  clear: both;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.monitorControls input {
+  margin-right: 0.5em;
+}
+
+.monitor {
+  margin: 10px 0;
+  padding: 6px;
+  border: 1px solid #999;
+  background-color: #ddd;
+  width: 587px;
+  height: 100px;
+  overflow: auto;
+  display: none;
 }
 
 .messages {

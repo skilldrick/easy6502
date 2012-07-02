@@ -42,6 +42,10 @@ function SimulatorWidget(node) {
         simulator.stopDebugger();
       }
     });
+    $node.find('.monitoring').change(function () {
+      ui.toggleMonitor();
+      simulator.toggleMonitor();
+    });
     $node.find('.stepButton').click(simulator.debugExec);
     $node.find('.gotoButton').click(simulator.gotoAddr);
     $node.find('.code').keypress(simulator.stop);
@@ -133,13 +137,18 @@ function SimulatorWidget(node) {
       setState(compiled);
     }
 
+    function toggleMonitor() {
+      $node.find('.monitor').toggle();
+    }
+
     return {
       initialize: initialize,
       play: play,
       stop: stop,
       compileSuccess: compileSuccess,
       debugOn: debugOn,
-      debugOff: debugOff
+      debugOff: debugOff,
+      toggleMonitor: toggleMonitor
     };
   }
 
@@ -217,12 +226,31 @@ function SimulatorWidget(node) {
       memory.storeByte(0xff, value);
     }
 
+    function format(start, length) {
+      var html = '';
+      var n;
+
+      for (var x = 0; x < length; x++) {
+        if ((x & 15) === 0) {
+          if (x > 0) { html += "<br/> "; }
+          n = (start + x);
+          html += num2hex(((n >> 8) & 0xff));
+          html += num2hex((n & 0xff));
+          html += ": ";
+        }
+        html += num2hex(memory.get(start + x));
+        html += " ";
+      }
+      return html;
+    }
+
     return {
       set: set,
       get: get,
       getWord: getWord,
       storeByte: storeByte,
-      storeKeypress: storeKeypress
+      storeKeypress: storeKeypress,
+      format: format
     };
   }
 
@@ -235,6 +263,7 @@ function SimulatorWidget(node) {
     var regSP = 0xff;
     var codeRunning = false;
     var debug = false;
+    var monitoring = false;
     var executeId;
 
     //set zero and negative processor flags based on result
@@ -1441,13 +1470,14 @@ function SimulatorWidget(node) {
       } else {
         ui.play();
         codeRunning = true;
-        executeId = setInterval(multiExecute, 30);
+        executeId = setInterval(multiExecute, 15);
       }
     }
 
     function multiExecute() {
       if (!debug) {
-        for (var w = 0; w < 200; w++) {
+        //prime number of iterations to avoid aliasing effects
+        for (var w = 0; w < 97; w++) {
           execute();
         }
       }
@@ -1488,6 +1518,15 @@ function SimulatorWidget(node) {
       memory.set(0xfe, Math.floor(Math.random() * 256));
     }
 
+    function updateMonitor() {
+      if (monitoring) {
+        var start = parseInt($node.find('.start').val(), 16);
+        var length = parseInt($node.find('.length').val(), 16);
+        if (start >= 0 && length > 0) {
+          $node.find('.monitor code').html(memory.format(start, length));
+        }
+      }
+    }
 
     // debugExec() - Execute one instruction and print values
     function debugExec() {
@@ -1506,6 +1545,7 @@ function SimulatorWidget(node) {
         html += regP >> i & 1;
       }
       $node.find('.minidebugger').html(html);
+      updateMonitor();
     }
 
     // gotoAddr() - Set PC to address (or address of label)
@@ -1561,6 +1601,10 @@ function SimulatorWidget(node) {
       clearInterval(executeId);
     }
 
+    function toggleMonitor() {
+      monitoring = !monitoring;
+    }
+
     return {
       runBinary: runBinary,
       enableDebugger: enableDebugger,
@@ -1568,7 +1612,8 @@ function SimulatorWidget(node) {
       debugExec: debugExec,
       gotoAddr: gotoAddr,
       reset: reset,
-      stop: stop
+      stop: stop,
+      toggleMonitor: toggleMonitor
     };
   }
 
@@ -2194,24 +2239,14 @@ function SimulatorWidget(node) {
     // hexDump() - Dump binary as hex to new window
     function hexdump() {
       var w = window.open('', 'hexdump', 'width=500,height=300,resizable=yes,scrollbars=yes,toolbar=no,location=no,menubar=no,status=no');
-      var n;
 
       var html = "<html><head>";
       html += "<link href='style.css' rel='stylesheet' type='text/css' />";
       html += "<title>hexdump</title></head><body>";
       html += "<code>";
-      for (var x = 0; x < codeLen; x++) {
-        if ((x & 15) === 0) {
-          html += "<br/> ";
-          n = (0x600 + x);
-          html += num2hex(((n >> 8) & 0xff));
-          html += num2hex((n & 0xff));
-          html += ": ";
-        }
-        html += num2hex(memory.get(0x600 + x));
-        html += " ";
-      }
-      if ((x & 1)) { html += "-- [END]"; }
+
+      html += memory.format(0x600, codeLen);
+
       html += "</code></body></html>";
       w.document.write(html);
       w.document.close();

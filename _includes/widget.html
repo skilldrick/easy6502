@@ -10,6 +10,16 @@
 
   <canvas class="screen" width="160" height="160"></canvas>
 
+  <div class="monitorControls">
+    <label for="monitoring">Monitor</label>
+    <input type="checkbox" class="monitoring" name="monitoring" />
+
+    <label for="start">Start $</label>
+    <input type="text" value="0" class="start" name="start" />
+    <label for="length">Length $</label>
+    <input type="text" value="ff" class="length" name="length" />
+  </div>
+
   <div class="debugger">
     <input type="checkbox" class="debug" name="debug" />
     <label for="debug">Debugger</label>
@@ -19,5 +29,6 @@
       <input type="button" value="Jump to..." class="gotoButton" />
     </div>
   </div>
+  <div class="monitor"><code></code></div>
   <div class="messages"></div>
 </div>
