@@ -233,6 +233,12 @@ memory available to the processor. Remember that a byte is represented by two
 hex characters, so the memory locations are generally represented as `$0000 -
 $ffff`. There are various ways to refer to these memory locations, as detailed below.
 
+With all these examples you might find it helpful to use the memory monitor to
+watch the memory change. The monitor takes a starting memory location and a
+number of bytes to display from that location. Both of these are hex values.
+For example, to display 16 bytes of memory from `$c000`, enter `c000` and `10`
+into **Start** and **Length**, respectively.
+
 ###Absolute: `$c000`###
 
 With absolute addressing, the full memory location is used as the argument to the instruction. For example:
