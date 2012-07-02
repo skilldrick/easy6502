@@ -64,7 +64,7 @@ noticed that `A=` changed from `$00` to `$01`, and `PC=` changed from `$0600` to
 `$0602`.
 
 Any numbers prefixed with `$` in 6502 assembly language (and by extension, in
-this book) are in hexadicmal (hex) format. If you're not familiar with hex
+this book) are in hexadecimal (hex) format. If you're not familiar with hex
 numbers, I recommend you read [the Wikipedia
 article](http://en.wikipedia.org/wiki/Hexadecimal). Anything prefixed with `#`
 is a literal number value. Any other number refers to a memory location.
@@ -153,12 +153,14 @@ An important thing to notice here is the distinction between `ADC #$01` and
 `ADC $01`. The first one adds the value `$01` to the `A` register, but the
 second adds the value stored at memory location `$01` to the `A` register.
 
-Compile, then step through these three instructions. `STA $01` stores the value
-of the `A` register at memory location `$01`, and `ADC $01` adds the value
-stored at the memory location `$01` to the `A` register. `$80 + $80` should
-equal `$100`, but because this is bigger than a byte, the `A` register is set
-to `$00` and the carry flag is set. As well as this though, the zero flag is
-set. The zero flag is set by all instructions where the result is zero.
+Compile, check the **Monitor** checkbox, then step through these three
+instructions. The monitor shows a section of memory, and can be helpful to
+visualise the execution of programs. `STA $01` stores the value of the `A`
+register at memory location `$01`, and `ADC $01` adds the value stored at the
+memory location `$01` to the `A` register. `$80 + $80` should equal `$100`, but
+because this is bigger than a byte, the `A` register is set to `$00` and the
+carry flag is set. As well as this though, the zero flag is set. The zero flag
+is set by all instructions where the result is zero.
 
 A full list of the 6502 instruction set is [available
 here](http://www.6502.org/tutorials/6502opcodes.html) and
@@ -387,6 +389,7 @@ to this address to give the final address `$0704`.
 ###Exercise###
 
 1. Try to write code snippets that use each of the 6502 addressing modes.
+   Remember, you can use the monitor to watch a section of memory.
 
 
 <h2 id='stack'>The stack</h2>
