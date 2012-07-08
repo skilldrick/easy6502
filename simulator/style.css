@@ -13,6 +13,10 @@
   width: 50px;
 }
 
+pre {
+  margin: 0;
+}
+
 .code {
   margin: 0 0 6px 0;
   padding: 6px;

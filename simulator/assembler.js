@@ -32,6 +32,7 @@ function SimulatorWidget(node) {
     $node.find('.runButton').click(simulator.stopDebugger);
     $node.find('.resetButton').click(simulator.reset);
     $node.find('.hexdumpButton').click(compiler.hexdump);
+    $node.find('.disassembleButton').click(compiler.disassemble);
     $node.find('.debug').change(function () {
       var debug = $(this).is(':checked');
       if (debug) {
@@ -68,6 +69,7 @@ function SimulatorWidget(node) {
       run: [false, 'Run'],
       reset: false,
       hexdump: false,
+      disassemble: false,
       debug: [false, false]
     };
     var compiled = {
@@ -75,6 +77,7 @@ function SimulatorWidget(node) {
       run: [true, 'Run'],
       reset: true,
       hexdump: true,
+      disassemble: true,
       debug: [true, false]
     };
     var running = {
@@ -82,18 +85,21 @@ function SimulatorWidget(node) {
       run: [true, 'Stop'],
       reset: true,
       hexdump: false,
+      disassemble: false,
       debug: [true, false]
     };
     var debugging = {
       compile: false,
       reset: true,
       hexdump: true,
+      disassemble: true,
       debug: [true, true]
     };
     var postDebugging = {
       compile: false,
       reset: true,
       hexdump: true,
+      disassemble: true,
       debug: [true, false]
     };
 
@@ -106,6 +112,7 @@ function SimulatorWidget(node) {
       }
       $node.find('.resetButton').attr('disabled', !state.reset);
       $node.find('.hexdumpButton').attr('disabled', !state.hexdump);
+      $node.find('.disassembleButton').attr('disabled', !state.disassemble);
       $node.find('.debug').attr('disabled', !state.debug[0]);
       $node.find('.debug').attr('checked', state.debug[1]);
       $node.find('.stepButton').attr('disabled', !state.debug[1]);
@@ -232,7 +239,7 @@ function SimulatorWidget(node) {
 
       for (var x = 0; x < length; x++) {
         if ((x & 15) === 0) {
-          if (x > 0) { html += "<br/> "; }
+          if (x > 0) { html += "\n"; }
           n = (start + x);
           html += num2hex(((n >> 8) & 0xff));
           html += num2hex((n & 0xff));
@@ -2059,7 +2066,8 @@ function SimulatorWidget(node) {
     // checkSingle() - Single-byte opcodes
     function checkSingle(param, opcode) {
       if (opcode === null) { return false; }
-      if (param !== "") { return false; }
+      // Accumulator instructions are counted as single-byte opcodes
+      if (param !== "" && param !== "A") { return false; }
       pushByte(opcode);
       return true;
     }
@@ -2236,20 +2244,188 @@ function SimulatorWidget(node) {
       pushByte((value >> 8) & 0xff);
     }
 
-    // hexDump() - Dump binary as hex to new window
-    function hexdump() {
-      var w = window.open('', 'hexdump', 'width=500,height=300,resizable=yes,scrollbars=yes,toolbar=no,location=no,menubar=no,status=no');
+    function openPopup(content, title) {
+      var w = window.open('', title, 'width=500,height=300,resizable=yes,scrollbars=yes,toolbar=no,location=no,menubar=no,status=no');
 
       var html = "<html><head>";
       html += "<link href='style.css' rel='stylesheet' type='text/css' />";
-      html += "<title>hexdump</title></head><body>";
-      html += "<code>";
+      html += "<title>" + title + "</title></head><body>";
+      html += "<pre><code>";
 
-      html += memory.format(0x600, codeLen);
+      html += content;
 
-      html += "</code></body></html>";
+      html += "</code></pre></body></html>";
       w.document.write(html);
       w.document.close();
+    }
+
+    // hexDump() - Dump binary as hex to new window
+    function hexdump() {
+      openPopup(memory.format(0x600, codeLen), 'Hexdump');
+    }
+
+    // TODO: Create separate disassembler object?
+    var addressingModes = [
+      null,
+      'Imm',
+      'ZP',
+      'ZPX',
+      'ZPY',
+      'ABS',
+      'ABSX',
+      'ABSY',
+      'IND',
+      'INDX',
+      'INDY',
+      'SNGL',
+      'BRA'
+    ];
+
+    var instructionLength = {
+      Imm: 2,
+      ZP: 2,
+      ZPX: 2,
+      ZPY: 2,
+      ABS: 3,
+      ABSX: 3,
+      ABSY: 3,
+      IND: 3,
+      INDX: 2,
+      INDY: 2,
+      SNGL: 1,
+      BRA: 2
+    };
+
+    function getModeAndCode(byte) {
+      var index;
+      var line = Opcodes.filter(function (line) {
+        var possibleIndex = line.indexOf(byte);
+        if (possibleIndex > -1) {
+          index = possibleIndex;
+          return true;
+        }
+      })[0];
+
+      if (!line) { //instruction not found
+        return {
+          opCode: '???',
+          mode: 'SNGL'
+        };
+      } else {
+        return {
+          opCode: line[0],
+          mode: addressingModes[index]
+        };
+      }
+    }
+
+    function createInstruction(address) {
+      var bytes = [];
+      var opCode;
+      var args = [];
+      var mode;
+
+      function isAccumulatorInstruction() {
+        var accumulatorBytes = [0x0a, 0x4a, 0x2a, 0x6a];
+        if (accumulatorBytes.indexOf(bytes[0]) > -1) {
+          return true;
+        }
+      }
+
+      function isBranchInstruction() {
+        return opCode.match(/^B/) && !(opCode == 'BIT' || opCode == 'BRK');
+      }
+
+      //This is gnarly, but unavoidably so?
+      function formatArguments() {
+        var argsString = args.map(num2hex).reverse().join('');
+
+        if (isBranchInstruction()) {
+          var destination = address + 2;
+          if (args[0] > 0x7f) {
+            destination -= 0x100 - args[0];
+          } else {
+            destination += args[0];
+          }
+          argsString = addr2hex(destination);
+        }
+
+        if (argsString) {
+          argsString = '$' + argsString;
+        }
+        if (mode == 'Imm') {
+          argsString = '#' + argsString;
+        }
+        if (mode.match(/X$/)) {
+          argsString += ',X';
+        }
+        if (mode.match(/^IND/)) {
+          argsString = '(' + argsString + ')';
+        }
+        if (mode.match(/Y$/)) {
+          argsString += ',Y';
+        }
+
+        if (isAccumulatorInstruction()) {
+          argsString = 'A';
+        }
+
+        return argsString;
+      }
+
+      return {
+        addByte: function (byte) {
+          bytes.push(byte);
+        },
+        setModeAndCode: function (modeAndCode) {
+          opCode = modeAndCode.opCode;
+          mode = modeAndCode.mode;
+        },
+        addArg: function (arg) {
+          args.push(arg);
+        },
+        toString: function () {
+          var bytesString = bytes.map(num2hex).join(' ');
+          var padding = Array(11 - bytesString.length).join(' ');
+          return '$' + addr2hex(address) + '    ' + bytesString + padding + opCode +
+            ' ' + formatArguments(args);
+        }
+      };
+    }
+
+    function disassemble() {
+      var startAddress = 0x600;
+      var currentAddress = startAddress;
+      var endAddress = startAddress + codeLen;
+      var instructions = [];
+      var length;
+      var inst;
+      var byte;
+      var modeAndCode;
+
+      while (currentAddress < endAddress - 1) {
+        inst = createInstruction(currentAddress);
+        byte = memory.get(currentAddress);
+        inst.addByte(byte);
+
+        modeAndCode = getModeAndCode(byte);
+        length = instructionLength[modeAndCode.mode];
+        inst.setModeAndCode(modeAndCode);
+
+        for (var i = 1; i < length; i++) {
+          currentAddress++;
+          byte = memory.get(currentAddress);
+          inst.addByte(byte);
+          inst.addArg(byte);
+        }
+        instructions.push(inst);
+        currentAddress++;
+      }
+
+      var html = 'Address  Hexdump   Dissassembly\n';
+      html +=    '-------------------------------\n';
+      html += instructions.join('\n');
+      openPopup(html, 'Disassembly');
     }
 
     return {
@@ -2258,7 +2434,8 @@ function SimulatorWidget(node) {
       getCurrentPC: function () {
         return defaultCodePC;
       },
-      hexdump: hexdump
+      hexdump: hexdump,
+      disassemble: disassemble
     };
   }
 
