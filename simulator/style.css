@@ -13,8 +13,11 @@
   width: 50px;
 }
 
-pre {
+.widget pre {
   margin: 0;
+  padding: 0;
+  background: inherit;
+  border: none;
 }
 
 .code {
