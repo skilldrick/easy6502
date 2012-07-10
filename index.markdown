@@ -2,6 +2,7 @@
 layout: default
 ---
 
+
 <h2 id="intro">Introduction</h2>
 
 In this tiny ebook I'm going to show you how to get started writing 6502
@@ -9,7 +10,8 @@ assembly language. The 6502 processor was massive in the seventies and
 eighties, powering famous computers like the
 [BBC Micro](http://en.wikipedia.org/wiki/BBC_Micro),
 [Atari 2600](http://en.wikipedia.org/wiki/Atari_2600),
-[Commodore 64](http://en.wikipedia.org/wiki/Commodore_64), and the [Nintendo Entertainment
+[Commodore 64](http://en.wikipedia.org/wiki/Commodore_64),
+[Apple II](http://en.wikipedia.org/wiki/Apple_II), and the [Nintendo Entertainment
 System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System). Bender in
 Futurama [has a 6502 processor for a
 brain](http://www.transbyte.org/SID/SID-files/Bender_6502.jpg). [Even the
@@ -40,8 +42,8 @@ leave it to them. Plus, 6502 is *fun*. Nobody ever called x86 *fun*.
 
 <h2 id="first-program">Our first program</h2>
 
-So, let's dive in! That thing below is a little [JavaScript 6502 compiler and
-emulator](https://github.com/skilldrick/6502js) that I adapted for this book.
+So, let's dive in! That thing below is a little [JavaScript 6502 assembler and
+simulator](https://github.com/skilldrick/6502js) that I adapted for this book.
 Click **Compile** then **Run** to compile and run the snippet of assembly language.
 
 {% include start.html %}
@@ -107,7 +109,7 @@ incremented when a byte is popped off the stack.
 
 `PC` is the program counter - it's how the processor knows at what point in the
 program it currently is. It's like the current line number of an executing
-script. In the JavaScript simulator the code is compiled starting at memory
+script. In the JavaScript simulator the code is assembled starting at memory
 location `$0600`, so `PC` always starts there.
 
 The last section shows the processor flags. Each flag is one bit, so all seven
@@ -126,7 +128,7 @@ source code to introduce a few different instructions:
 LDA #$c0  ;Load the hex value $c0 into the A register
 TAX       ;Transfer the value in the A register to X
 INX       ;Increment the value in the X register
-ADC #$c4  ;Add the hex value $cc to the A register
+ADC #$c4  ;Add the hex value $c4 to the A register
 BRK       ;Break - we're done
 {% include end.html %}
 
@@ -213,7 +215,7 @@ were not equal), otherwise it does nothing and we store `X` to `$0201`, then
 finish the program.
 
 In assembly language, you'll usually use labels with branch instructions. When
-compiled though, this label is converted to a single-byte relative offset (a
+assembled though, this label is converted to a single-byte relative offset (a
 number of bytes to go backwards or forwards from the next instruction) so
 branch instructions can only go forward and back around 256 bytes. This means
 they can only be used to move around local code. For moving further you'll need
@@ -251,7 +253,7 @@ All instructions that support absolute addressing (with the exception of the jum
 instructions) also have the option to take a single-byte address. This type of
 addressing is called "zero page" - only the first page (the first 256 bytes) of
 memory is accessible. This is faster, as only one byte needs to be looked up,
-and takes up less space in the compiled code as well.
+and takes up less space in the assembled code as well.
 
 ###Zero page,X: `$c0,X`###
 
@@ -292,7 +294,7 @@ instruction `LDX $01` which loads the value at memory location `$01` into the
 Relative addressing is used for branching instructions. These instructions take
 a single byte, which is used as an offset from the following instruction.
 
-Compile the following code, then click the **Hexdump** button to see the compiled code.
+Compile the following code, then click the **Hexdump** button to see the assembled code.
 
 {% include start.html %}
   LDA #$01
@@ -310,7 +312,7 @@ The hex should look something like this:
 `a9` and `c9` are the processor opcodes for immediate-addressed `LDA` and `CMP`
 respectively. `01` and `02` are the arguments to these instructions. `d0` is
 the opcode for `BNE`, and its argument is `02`. This means "skip over the next
-two bytes" (`85 22`, the compiled version of `STA $22`). Try editing the code
+two bytes" (`85 22`, the assembled version of `STA $22`). Try editing the code
 so `STA` takes a two-byte absolute address rather than a single-byte zero page
 address (e.g. change `STA $22` to `STA $2222`). Recompile the code and look at
 the hexdump again - the argument to `BNE` should now be `03`, because the
