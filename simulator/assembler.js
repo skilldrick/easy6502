@@ -734,7 +734,7 @@ function SimulatorWidget(node) {
       },
 
       i45: function () {
-        var addr = (popByte() + regX) & 0xff;
+        var addr = popByte() & 0xff;
         var value = memory.get(addr);
         regA ^= value;
         EOR();
