@@ -2,7 +2,6 @@
 layout: default
 ---
 
-
 <h2 id="intro">Introduction</h2>
 
 In this tiny ebook I'm going to show you how to get started writing 6502

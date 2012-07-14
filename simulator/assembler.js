@@ -17,7 +17,7 @@ function SimulatorWidget(node) {
   var memory = Memory();
   var labels = Labels();
   var simulator = Simulator();
-  var compiler = Compiler();
+  var assembler = Assembler();
 
   function initialize() {
     stripText();
@@ -25,14 +25,14 @@ function SimulatorWidget(node) {
     display.initialize();
     simulator.reset();
 
-    $node.find('.compileButton').click(function () {
-      compiler.compileCode();
+    $node.find('.assembleButton').click(function () {
+      assembler.assembleCode();
     });
     $node.find('.runButton').click(simulator.runBinary);
     $node.find('.runButton').click(simulator.stopDebugger);
     $node.find('.resetButton').click(simulator.reset);
-    $node.find('.hexdumpButton').click(compiler.hexdump);
-    $node.find('.disassembleButton').click(compiler.disassemble);
+    $node.find('.hexdumpButton').click(assembler.hexdump);
+    $node.find('.disassembleButton').click(assembler.disassemble);
     $node.find('.debug').change(function () {
       var debug = $(this).is(':checked');
       if (debug) {
@@ -65,15 +65,15 @@ function SimulatorWidget(node) {
     var currentState;
 
     var start = {
-      compile: true,
+      assemble: true,
       run: [false, 'Run'],
       reset: false,
       hexdump: false,
       disassemble: false,
       debug: [false, false]
     };
-    var compiled = {
-      compile: false,
+    var assembled = {
+      assemble: false,
       run: [true, 'Run'],
       reset: true,
       hexdump: true,
@@ -81,7 +81,7 @@ function SimulatorWidget(node) {
       debug: [true, false]
     };
     var running = {
-      compile: false,
+      assemble: false,
       run: [true, 'Stop'],
       reset: true,
       hexdump: false,
@@ -89,14 +89,14 @@ function SimulatorWidget(node) {
       debug: [true, false]
     };
     var debugging = {
-      compile: false,
+      assemble: false,
       reset: true,
       hexdump: true,
       disassemble: true,
       debug: [true, true]
     };
     var postDebugging = {
-      compile: false,
+      assemble: false,
       reset: true,
       hexdump: true,
       disassemble: true,
@@ -105,7 +105,7 @@ function SimulatorWidget(node) {
 
 
     function setState(state) {
-      $node.find('.compileButton').attr('disabled', !state.compile);
+      $node.find('.assembleButton').attr('disabled', !state.assemble);
       if (state.run) {
         $node.find('.runButton').attr('disabled', !state.run[0]);
         $node.find('.runButton').val(state.run[1]);
@@ -129,7 +129,7 @@ function SimulatorWidget(node) {
     }
 
     function stop() {
-      setState(compiled);
+      setState(assembled);
     }
 
     function debugOn() {
@@ -140,8 +140,8 @@ function SimulatorWidget(node) {
       setState(postDebugging);
     }
 
-    function compileSuccess() {
-      setState(compiled);
+    function assembleSuccess() {
+      setState(assembled);
     }
 
     function toggleMonitor() {
@@ -152,7 +152,7 @@ function SimulatorWidget(node) {
       initialize: initialize,
       play: play,
       stop: stop,
-      compileSuccess: compileSuccess,
+      assembleSuccess: assembleSuccess,
       debugOn: debugOn,
       debugOff: debugOff,
       toggleMonitor: toggleMonitor
@@ -1468,7 +1468,7 @@ function SimulatorWidget(node) {
       return popByte() + (popByte() << 8);
     }
 
-    // runBinary() - Executes the compiled code
+    // runBinary() - Executes the assembled code
     function runBinary() {
       if (codeRunning) {
         // Switch OFF everything
@@ -1649,8 +1649,8 @@ function SimulatorWidget(node) {
       input = input.replace(/\s+$/, "");
 
       // Figure out how many bytes this instruction takes
-      var currentPC = compiler.getCurrentPC();
-      compiler.compileLine(input); //TODO: find a better way for Labels to have access to compiler
+      var currentPC = assembler.getCurrentPC();
+      assembler.assembleLine(input); //TODO: find a better way for Labels to have access to assembler
 
       // Find command or label
       if (input.match(/^\w+:/)) {
@@ -1728,10 +1728,10 @@ function SimulatorWidget(node) {
   }
 
 
-  function Compiler() {
+  function Assembler() {
     var defaultCodePC;
     var codeLen;
-    var codeCompiledOK = false;
+    var codeAssembledOK = false;
 
     var Opcodes = [
       /* Name, Imm,  ZP,   ZPX,  ZPY,  ABS, ABSX, ABSY,  IND, INDX, INDY, SNGL, BRA */
@@ -1794,9 +1794,9 @@ function SimulatorWidget(node) {
       ["---", null, null, null, null, null, null, null, null, null, null, null, null]
     ];
 
-    // compileCode()
-    // "Compiles" the code into memory
-    function compileCode() {
+    // assembleCode()
+    // "assembles" the code into memory
+    function assembleCode() {
       simulator.reset();
       labels.reset();
       defaultCodePC = 0x600;
@@ -1805,7 +1805,7 @@ function SimulatorWidget(node) {
       var code = $node.find('.code').val();
       code += "\n\n";
       var lines = code.split("\n");
-      codeCompiledOK = true;
+      codeAssembledOK = true;
 
       message("Indexing labels..");
 
@@ -1818,23 +1818,23 @@ function SimulatorWidget(node) {
       labels.displayMessage();
 
       defaultCodePC = 0x600;
-      message("Compiling code ...");
+      message("Assembling code ...");
 
       codeLen = 0;
       for (var i = 0; i < lines.length; i++) {
-        if (!compileLine(lines[i], i)) {
-          codeCompiledOK = false;
+        if (!assembleLine(lines[i], i)) {
+          codeAssembleddOK = false;
           break;
         }
       }
 
       if (codeLen === 0) {
-        codeCompiledOK = false;
+        codeAssembledOK = false;
         message("No code to run.");
       }
 
-      if (codeCompiledOK) {
-        ui.compileSuccess();
+      if (codeAssembledOK) {
+        ui.assembleSuccess();
         memory.set(defaultCodePC, 0x00); //set a null byte at the end of the code
       } else {
         var str = lines[i].replace("<", "&lt;").replace(">", "&gt;");
@@ -1843,14 +1843,14 @@ function SimulatorWidget(node) {
         return;
       }
 
-      message("Code compiled successfully, " + codeLen + " bytes.");
+      message("Code assembled successfully, " + codeLen + " bytes.");
     }
 
-    // compileLine()
+    // assembleLine()
     //
-    // Compiles one line of code.  Returns true if it compiled successfully,
+    // assembles one line of code.  Returns true if it assembled successfully,
     // false otherwise.
-    function compileLine(input, lineno) {
+    function assembleLine(input, lineno) {
       var label, command, param, addr;
 
       // remove comments
@@ -2084,9 +2084,9 @@ function SimulatorWidget(node) {
         return true;
       }
       if (param.match(/^[0-9]{1,3}$/i)) {
-        pushByte(opcode);
         value = parseInt(param, 10);
         if (value < 0 || value > 255) { return false; }
+        pushByte(opcode);
         pushByte(value);
         return true;
       }
@@ -2429,8 +2429,8 @@ function SimulatorWidget(node) {
     }
 
     return {
-      compileLine: compileLine,
-      compileCode: compileCode,
+      assembleLine: assembleLine,
+      assembleCode: assembleCode,
       getCurrentPC: function () {
         return defaultCodePC;
       },
