@@ -5,6 +5,7 @@
     <input type="button" value="Reset" class="resetButton" />
     <input type="button" value="Hexdump" class="hexdumpButton" />
     <input type="button" value="Disassemble" class="disassembleButton" />
+    <input type="button" value="Notes" class="notesButton" />
   </div>
 
   <textarea class="code"></textarea>
@@ -32,5 +33,31 @@
   </div>
 
   <div class="monitor"><pre><code></code></pre></div>
-  <div class="messages"></div>
+  <div class="messages"><pre><code></code></pre></div>
+
+  <div class="notes" style="display: none">Notes:
+
+Memory location $fe contains a new random byte on every instruction.
+Memory location $ff contains the ascii code of the last key pressed.
+
+Memory locations $200 to $5ff map to the screen pixels. Different values will
+draw different colour pixels. The colours are:
+
+$0: Black
+$1: White
+$2: Red
+$3: Cyan
+$4: Purple
+$5: Green
+$6: Blue
+$7: Yellow
+$8: Orange
+$9: Brown
+$a: Light red
+$b: Dark grey
+$c: Grey
+$d: Light green
+$e: Light blue
+$f: Light grey
+    </div>
 </div>

@@ -43,7 +43,7 @@ leave it to them. Plus, 6502 is *fun*. Nobody ever called x86 *fun*.
 
 So, let's dive in! That thing below is a little [JavaScript 6502 assembler and
 simulator](https://github.com/skilldrick/6502js) that I adapted for this book.
-Click **Compile** then **Run** to compile and run the snippet of assembly language.
+Click **Assemble** then **Run** to assemble and run the snippet of assembly language.
 
 {% include start.html %}
 LDA #$01
@@ -131,7 +131,7 @@ ADC #$c4  ;Add the hex value $c4 to the A register
 BRK       ;Break - we're done
 {% include end.html %}
 
-Compile the code, then turn on the debugger and step through the code, watching
+Assemble the code, then turn on the debugger and step through the code, watching
 the `A` and `X` registers. Something slightly odd happens on the line `ADC #$c4`.
 You might expect that adding `$c4` to `$c0` would give `$184`, but this
 processor gives the result as `$84`. What's up with that?
@@ -154,7 +154,7 @@ An important thing to notice here is the distinction between `ADC #$01` and
 `ADC $01`. The first one adds the value `$01` to the `A` register, but the
 second adds the value stored at memory location `$01` to the `A` register.
 
-Compile, check the **Monitor** checkbox, then step through these three
+Assemble, check the **Monitor** checkbox, then step through these three
 instructions. The monitor shows a section of memory, and can be helpful to
 visualise the execution of programs. `STA $01` stores the value of the `A`
 register at memory location `$01`, and `ADC $01` adds the value stored at the
@@ -293,7 +293,7 @@ instruction `LDX $01` which loads the value at memory location `$01` into the
 Relative addressing is used for branching instructions. These instructions take
 a single byte, which is used as an offset from the following instruction.
 
-Compile the following code, then click the **Hexdump** button to see the assembled code.
+Assemble the following code, then click the **Hexdump** button to see the assembled code.
 
 {% include start.html %}
   LDA #$01
@@ -313,7 +313,7 @@ respectively. `01` and `02` are the arguments to these instructions. `d0` is
 the opcode for `BNE`, and its argument is `02`. This means "skip over the next
 two bytes" (`85 22`, the assembled version of `STA $22`). Try editing the code
 so `STA` takes a two-byte absolute address rather than a single-byte zero page
-address (e.g. change `STA $22` to `STA $2222`). Recompile the code and look at
+address (e.g. change `STA $22` to `STA $2222`). Reassemble the code and look at
 the hexdump again - the argument to `BNE` should now be `03`, because the
 instruction the processor is skipping past is now three bytes long.
 
@@ -341,7 +341,7 @@ JMP ($00f0) ;dereferences to $cc01
 In this example, `$f0` contains the value `$01` and `$f1` contains the value
 `$cc`. The instruction `JMP ($f0)` causes the processor to look up the two
 bytes at `$f0` and `$f1` (`$01` and `$cc`) and put them together to form the
-address `$cc01`, which becomes the new program counter. Compile and step
+address `$cc01`, which becomes the new program counter. Assemble and step
 through the program above to see what happens. I'll talk more about `JMP` in
 the section on [Jumping](#jumping).
 

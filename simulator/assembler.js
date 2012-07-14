@@ -49,6 +49,7 @@ function SimulatorWidget(node) {
     });
     $node.find('.stepButton').click(simulator.debugExec);
     $node.find('.gotoButton').click(simulator.gotoAddr);
+    $node.find('.notesButton').click(ui.showNotes);
     $node.find('.code').keypress(simulator.stop);
     $node.find('.code').keypress(ui.initialize);
     $(document).keypress(memory.storeKeypress);
@@ -148,6 +149,10 @@ function SimulatorWidget(node) {
       $node.find('.monitor').toggle();
     }
 
+    function showNotes() {
+      $node.find('.messages code').html($node.find('.notes').html());
+    }
+
     return {
       initialize: initialize,
       play: play,
@@ -155,7 +160,8 @@ function SimulatorWidget(node) {
       assembleSuccess: assembleSuccess,
       debugOn: debugOn,
       debugOff: debugOff,
-      toggleMonitor: toggleMonitor
+      toggleMonitor: toggleMonitor,
+      showNotes: showNotes
     };
   }
 
@@ -1631,7 +1637,7 @@ function SimulatorWidget(node) {
     function indexLines(lines) {
       for (var i = 0; i < lines.length; i++) {
         if (!indexLine(lines[i])) {
-          message("<b>Label already defined at line " + (i + 1) + ":</b> " + lines[i]);
+          message("**Label already defined at line " + (i + 1) + ":** " + lines[i]);
           return false;
         }
       }
@@ -1800,7 +1806,7 @@ function SimulatorWidget(node) {
       simulator.reset();
       labels.reset();
       defaultCodePC = 0x600;
-      $node.find('.messages').empty();
+      $node.find('.messages code').empty();
 
       var code = $node.find('.code').val();
       code += "\n\n";
@@ -1838,7 +1844,7 @@ function SimulatorWidget(node) {
         memory.set(defaultCodePC, 0x00); //set a null byte at the end of the code
       } else {
         var str = lines[i].replace("<", "&lt;").replace(">", "&gt;");
-        message("<b>Syntax error line " + (i + 1) + ": " + str + "</b>");
+        message("**Syntax error line " + (i + 1) + ": " + str + "**");
         ui.initialize();
         return;
       }
@@ -2453,7 +2459,7 @@ function SimulatorWidget(node) {
 
   // message() - Prints text in the message window
   function message(text) {
-    $node.find('.messages').append(text + '<br>').scrollTop(10000);
+    $node.find('.messages code').append(text + '\n').scrollTop(10000);
   }
 
 
