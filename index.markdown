@@ -18,8 +18,12 @@ Terminator was programmed in
 6502](http://www.pagetable.com/docs/terminator/00-37-23.jpg).
 
 So, why would you want to learn 6502? It's a dead language isn't it? Well,
-yeah, but so's Latin. And they still teach that.
+so's Latin. And they still teach that.
 [Q.E.D.](http://en.wikipedia.org/wiki/Q.E.D.)
+
+(Actually, I've been reliably informed that 6502 processors are still being
+produced by [Western Design Center](http://www.65xx.com/wdc/), so clearly 6502
+*isn't* a dead language! Who knew?)
 
 Seriously though, I think it's valuable to have an understanding of assembly
 language. Assembly language is the lowest level of abstraction in computers -
@@ -32,7 +36,7 @@ Then why 6502? Why not a *useful* assembly language, like
 [x86](http://en.wikipedia.org/wiki/X86)? Well, I don't think learning x86 is
 useful. I don't think you'll ever have to *write* assembly language in your day
 job - this is purely an academic exercise, something to expand your mind and
-your thinking. 6502 was written in a different age, a time when the majority of
+your thinking. 6502 was originally written in a different age, a time when the majority of
 developers were writing assembly directly, rather than in these new-fangled
 high-level programming languages. So, it was designed to be written by humans.
 More modern assembly languages are meant to written by compilers, so let's
