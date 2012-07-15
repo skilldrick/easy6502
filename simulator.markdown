@@ -18,7 +18,7 @@ loop:
 
 testMemory:
   lda #0
-  ldx $10    ;$10 is the previous location
+  ldx $10    ;$10 is the previous value of $80
   sta $500,x
   lda #1
   ldx $80
@@ -26,7 +26,7 @@ testMemory:
   stx $10
 
   lda #0
-  ldx $11
+  ldx $11    ;$11 is the previous value of $81
   sta $520,x
   lda #1
   ldx $81
