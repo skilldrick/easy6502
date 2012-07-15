@@ -7,118 +7,55 @@ layout: basic
 To use the disassembler, click **Compile**, then **Disassemble**. [Back to Easy 6502](index.html).
 
 {% include start.html %}
-; Spacer
-;
-; From 6502asm.com
-;
-; Controls:
-;
-;   W - move up
-;   X - move down
-;   Any other key will stop the ship
-
 start:
   jsr init
 
 loop:
-  jsr drawShip
   jsr drawMap
   jsr genMap
-  jsr readKeys
+  jsr testMemory
   jmp loop
 
-;--
-
-drawShip:
-  lda $60
-  asl
-  tay
-
-  lda ypos,y
-  sta $00
-  iny
-  lda ypos,y
-  sta $01
-
-  ldy #42
-  lda ($00),y
-  cmp #0
-  beq noCrash
-  cmp #5
-  bne crashed
-noCrash:
-  lda #5
-  sta ($00),y
-
-  lda $60
-  cmp $61
-  beq ret
-
-  lda $61
-  asl
-  tay
-  lda ypos,y
-  sta $00
-  iny
-  lda ypos,y
-  sta $01
+testMemory:
   lda #0
-  ldy #42
-  sta ($00),y
+  ldx $10    ;$10 is the previous location
+  sta $500,x
+  lda #1
+  ldx $80
+  sta $500,x
+  stx $10
 
-  lda $60
-  sta $61
-ret:
+  lda #0
+  ldx $11
+  sta $520,x
+  lda #1
+  ldx $81
+  sta $520,x
+  stx $11
+
   rts
-
-;--
-
-crashed:
-  lda $fe
-  sta ($00),y
-  jmp crashed
-
-;--
-
-readKeys:
-  lda $ff
-  cmp #119
-  bne notUp
-  dec $60
-  rts
-notUp:
-  cmp #120
-  bne noMove
-  inc $60
-noMove:
-  rts
-
-;--
 
 init:
-  ldx #0
-drawLogo:
-  lda bottomLogo,x
-  sta $500,x
-  inx
-  cpx #0
-  bne drawLogo
-
   lda #10
   sta $60
   sta $61
 
   ldx #0
-  lda #$c
-c:sta $200,x
-  sta $400,x
-  dex
-  cpx #0
-  bne c
+  lda walls
 
-  lda #16
+;draw exactly 256 pixels of wall at top and bottom
+drawinitialwalls:
+  sta $200,x ;draw the top bit of wall
+  sta $400,x ;draw the bottom bit of wall
+  dex        ;count down from 0
+  cpx #0     ;until we hit 0
+  bne drawinitialwalls
+
+  lda #$10
   sta $80  ; origin
-  ldx #15
+  ldx #$0f
+
+;fill $81-$90 with $10
 set:
   sta $81,x  ; target
   dex
@@ -128,27 +65,29 @@ set:
 ;--
 
 drawMap:
-  lda #0
+  lda #$00
   sta $78
-  lda #32
+  lda #$20
   sta $79
-  lda #192
+  lda #$c0
   sta $7a
-  lda #224
+  lda #$e0
   sta $7b
 
-  ldx #15
+  ldx #$0f
 drawLoop:
   lda $81,x
   sta $82,x
+
   tay
+  sty $02
   lda ypos,y
   sta $00
   iny
   lda ypos,y
   sta $01
 
-  lda #$c
+  lda walls
   ldy $78
   sta ($00),y
   iny
@@ -180,6 +119,8 @@ drawLoop:
   inc $7b
   dex
   bpl drawLoop
+  LDX #$1
+  STX $91
   rts
 
 ;---
@@ -218,24 +159,9 @@ ypos:
   dcb $00,$05,$20,$05,$40,$05,$60,$05
   dcb $80,$05,$a0,$05,$c0,$05,$e0,$05
 
-bottomLogo:
-  dcb $0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0
-  dcb $0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0
-  dcb $0,$0,$0,$0,$0,$0,$1,$1,$1,$6,$1,$1,$1,$0
-  dcb $0,$6,$1,$1,$6,$0,$0,$1,$1,$1,$6,$0,$1,$1
-  dcb $1,$0,$1,$1,$1,$6,$0,$0,$6,$1,$6,$0,$6,$0
-  dcb $1,$0,$6,$1,$6,$1,$6,$0,$1,$0,$1,$0,$6,$0
-  dcb $6,$1,$6,$0,$6,$0,$1,$0,$6,$1,$6,$0,$0,$6
-  dcb $1,$1,$6,$6,$1,$1,$1,$0,$6,$1,$0,$0,$1,$0
-  dcb $1,$6,$0,$6,$6,$1,$1,$1,$0,$6,$1,$0,$6,$1
-  dcb $0,$6,$6,$6,$6,$6,$1,$6,$1,$1,$6,$6,$6,$1
-  dcb $1,$1,$1,$6,$1,$6,$6,$6,$6,$1,$6,$6,$6,$6
-  dcb $1,$1,$1,$6,$6,$6,$6,$1,$1,$1,$1,$e,$1,$1
-  dcb $e,$6,$6,$1,$1,$6,$1,$6,$1,$1,$1,$1,$e,$1
-  dcb $1,$1,$1,$6,$1,$1,$6,$1,$6,$6,$6,$1,$1,$1
-  dcb $6,$e,$1,$1,$6,$e,$6,$1,$1,$e,$1,$e,$6,$1
-  dcb $1,$1,$6,$e,$1,$1,$1,$e,$1,$1,$6,$1,$6,$e
-  dcb $e,$e,$6,$e,$e,$6,$e,$e,$6,$e,$e,$6,$e,$e
-  dcb $6,$e,$e,$6,$e,$e,$6,$e,$e,$6,$e,$e,$6,$e
-  dcb $e,$6,$e,$e
+walls:
+  dcb $d
+
+shipcolour:
+  dcb $4
 {% include end.html %}
