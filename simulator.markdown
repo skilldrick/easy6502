@@ -4,7 +4,7 @@ layout: basic
 
 <h2>Simulator</h2>
 
-To use the disassembler, click **Compile**, then **Disassemble**. [Back to Easy 6502](index.html).
+To use the disassembler, click **Assemble**, then **Disassemble**. [Back to Easy 6502](index.html).
 
 {% include start.html %}
 start:
@@ -32,6 +32,22 @@ testMemory:
   ldx $81
   sta $520,x
   stx $11
+
+  lda #0
+  ldx $12    ;$12 is the previous value of $85
+  sta $540,x
+  lda #1
+  ldx $85
+  sta $540,x
+  stx $12
+
+  lda #0
+  ldx $13    ;$13 is the previous value of $89
+  sta $560,x
+  lda #1
+  ldx $89
+  sta $560,x
+  stx $13
 
   rts
 
