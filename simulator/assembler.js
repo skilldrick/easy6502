@@ -318,12 +318,15 @@ function SimulatorWidget(node) {
     var EOR = setNVflagsForRegA;
     var ASL = setNVflags;
     var LSR = setNVflags;
-    var BIT = setNVflags;
     var ROL = setNVflags;
     var ROR = setNVflags;
     var LDA = setNVflagsForRegA;
     var LDX = setNVflagsForRegX;
     var LDY = setNVflagsForRegY;
+
+    function BIT(value) {
+      setNVflags(value & regA);
+    }
 
     function CLC() {
       regP &= 0xfe;
