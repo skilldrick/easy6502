@@ -17,30 +17,32 @@ layout: basic
   jsr loop
 
 init:
-  jsr loadrandompixel
+  ;jsr loadrandompixel
   jsr initsnake
   rts
 
 initsnake:
   lda #2  ;start direction
   sta $02
-  lda #2  ;start length
+  lda #4  ;start length
   sta $03
-  lda #$0f
+  lda #$11
   sta $10
   lda #$10
   sta $12
+  lda #$0f
+  sta $14
   lda #$04
   sta $11
   sta $13
+  sta $15
 
 loop:
-  jsr spinwheels
   jsr readkeys
-  jsr erasesnake
   jsr updatesnake
   jsr drawsnake
   ;jsr drawrandompixel
+  jsr spinwheels
   jmp loop
 
 spinwheels:
@@ -52,12 +54,6 @@ spinloop:
   bne spinloop
   rts
 
-erasesnake:
-  ldy #0
-  lda background
-  sta ($10),y
-  rts
-
 ;Need to draw the whole snake body here
 ;Only draw head and erase tail each time
 ;Tail is head pointer + length
@@ -65,9 +61,28 @@ drawsnake:
   ldy #0
   lda foreground
   sta ($10),y
+  lda $03
+  tax
+  lda background
+  sta ($10,x)
   rts
 
 updatesnake:
+  lda $03 ;location of length
+  tax
+  dex ;last pair index is length - 1
+  txa
+  clc
+  adc #2
+  tay
+updateloop:
+  lda $10,x
+  sta $0010,y
+  dex
+  dey
+  cpy #1
+  bne updateloop
+
   lda #1
   bit $02
   bne up
