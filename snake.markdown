@@ -7,7 +7,7 @@ layout: basic
 
 ; Change direction: W A S D
 
-; $00-01 => screen location of random pixel
+; $00-01 => screen location of apple
 ; $10-11 => screen location of snake head
 ; $12-?? => snake body (in byte pairs)
 ; $02    => direction (1 => up, 2 => right, 4 => down, 8 => left)
@@ -17,9 +17,10 @@ layout: basic
   jsr loop
 
 init:
-  ;jsr loadrandompixel
   jsr initsnake
+  jsr initapple
   rts
+
 
 initsnake:
   lda #2  ;start direction
@@ -36,14 +37,23 @@ initsnake:
   sta $11
   sta $13
   sta $15
+  rts
+
+
+initapple:
+  jsr generateApplePosition
+  rts
+
 
 loop:
   jsr readkeys
-  jsr updatesnake
-  jsr drawsnake
-  ;jsr drawrandompixel
+  jsr checkCollision
+  jsr updateSnake
+  jsr drawApple
+  jsr drawSnake
   jsr spinwheels
   jmp loop
+
 
 spinwheels:
   ldx #0
@@ -54,20 +64,77 @@ spinloop:
   bne spinloop
   rts
 
-;Need to draw the whole snake body here
-;Only draw head and erase tail each time
-;Tail is head pointer + length
-drawsnake:
+
+drawApple:
   ldy #0
+  lda $fe
+  sta ($00),y
+  rts
+
+
+drawSnake:
+  ldx #0
   lda foreground
-  sta ($10),y
+  sta ($10,x)
   lda $03
   tax
   lda background
   sta ($10,x)
   rts
 
-updatesnake:
+
+checkCollision:
+  jsr checkAppleCollision
+  jsr checkSnakeCollision
+  rts
+
+
+checkAppleCollision:
+  lda $00
+  cmp $10
+  bne doneCheckingAppleCollision
+  lda $01
+  cmp $11
+  bne doneCheckingAppleCollision
+
+  ;eat apple
+  inc $03
+  inc $03 ;increase length
+  lda $fe
+  jsr generateApplePosition
+doneCheckingAppleCollision:
+  rts
+
+
+checkSnakeCollision:
+  ldx #2 ;start with second segment
+snakeCollisionLoop:
+  lda $10,x
+  cmp $10
+  beq maybeCollided
+  bne continueCollisionLoop
+
+maybeCollided:
+  lda $11,x
+  cmp $11
+  beq didCollide
+
+continueCollisionLoop:
+  inx
+  inx
+  cpx $03          ;got to last section with no collision
+  beq didntCollide
+  jmp snakeCollisionLoop
+
+didCollide:
+  lda #7
+  sta $30
+  jmp collision
+didntCollide:
+  rts
+
+
+updateSnake:
   lda $03 ;location of length
   tax
   dex ;last pair index is length - 1
@@ -137,6 +204,7 @@ left:
 collision:
   jmp gameover
 
+
 readkeys:
   lda $ff
   cmp #$77
@@ -149,32 +217,42 @@ readkeys:
   beq leftkey
   rts
 upkey:
+  lda #4
+  bit $02
+  bne illegalMove
+
   lda #1
   sta $02
   rts
 rightkey:
+  lda #8
+  bit $02
+  bne illegalMove
+
   lda #2
   sta $02
   rts
 downkey:
+  lda #1
+  bit $02
+  bne illegalMove
+
   lda #4
   sta $02
   rts
 leftkey:
+  lda #2
+  bit $02
+  bne illegalMove
+
   lda #8
   sta $02
   rts
-
-drawrandompixel:
-  ldy #0
-  lda background
-  sta ($00),y ;clear previous pixel
-  jsr loadrandompixel
-  lda $fe
-  sta ($00),y
+illegalMove:
   rts
 
-loadrandompixel:
+
+generateApplePosition:
   ;load a new random byte into $00
   lda $fe
   sta $00
@@ -182,10 +260,12 @@ loadrandompixel:
   ;load a new random number from 2 to 5 into $01
   lda $fe
   and #$3
+  clc
   adc #$2
   sta $01
 
   rts
+
 
 background:
   dcb $0
