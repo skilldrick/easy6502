@@ -18,7 +18,7 @@ layout: basic
 
 init:
   jsr initsnake
-  jsr initapple
+  jsr generateApplePosition
   rts
 
 
@@ -40,8 +40,18 @@ initsnake:
   rts
 
 
-initapple:
-  jsr generateApplePosition
+generateApplePosition:
+  ;load a new random byte into $00
+  lda $fe
+  sta $00
+
+  ;load a new random number from 2 to 5 into $01
+  lda $fe
+  and #$03 ;mask out lowest 2 bits
+  clc
+  adc #2
+  sta $01
+
   rts
 
 
@@ -53,156 +63,6 @@ loop:
   jsr drawSnake
   jsr spinwheels
   jmp loop
-
-
-spinwheels:
-  ldx #0
-spinloop:
-  nop
-  nop
-  dex
-  bne spinloop
-  rts
-
-
-drawApple:
-  ldy #0
-  lda $fe
-  sta ($00),y
-  rts
-
-
-drawSnake:
-  ldx #0
-  lda foreground
-  sta ($10,x)
-  lda $03
-  tax
-  lda background
-  sta ($10,x)
-  rts
-
-
-checkCollision:
-  jsr checkAppleCollision
-  jsr checkSnakeCollision
-  rts
-
-
-checkAppleCollision:
-  lda $00
-  cmp $10
-  bne doneCheckingAppleCollision
-  lda $01
-  cmp $11
-  bne doneCheckingAppleCollision
-
-  ;eat apple
-  inc $03
-  inc $03 ;increase length
-  lda $fe
-  jsr generateApplePosition
-doneCheckingAppleCollision:
-  rts
-
-
-checkSnakeCollision:
-  ldx #2 ;start with second segment
-snakeCollisionLoop:
-  lda $10,x
-  cmp $10
-  beq maybeCollided
-  bne continueCollisionLoop
-
-maybeCollided:
-  lda $11,x
-  cmp $11
-  beq didCollide
-
-continueCollisionLoop:
-  inx
-  inx
-  cpx $03          ;got to last section with no collision
-  beq didntCollide
-  jmp snakeCollisionLoop
-
-didCollide:
-  lda #7
-  sta $30
-  jmp collision
-didntCollide:
-  rts
-
-
-updateSnake:
-  lda $03 ;location of length
-  tax
-  dex ;last pair index is length - 1
-  txa
-  clc
-  adc #2
-  tay
-updateloop:
-  lda $10,x
-  sta $0010,y
-  dex
-  dey
-  cpy #1
-  bne updateloop
-
-  lda #1
-  bit $02
-  bne up
-  lda #2
-  bit $02
-  bne right
-  lda #4
-  bit $02
-  bne down
-  lda #8
-  bit $02
-  bne left
-up:
-  lda $10
-  sec
-  sbc #$20
-  sta $10
-  bcc upup
-  rts
-upup:
-  dec $11
-  lda #$1
-  cmp $11
-  beq collision
-  rts
-right:
-  inc $10
-  lda #$1f
-  bit $10
-  beq collision
-  rts
-down:
-  lda $10
-  clc
-  adc #$20
-  sta $10
-  bcs downdown
-  rts
-downdown:
-  inc $11
-  lda #$6
-  cmp $11
-  beq collision
-  rts
-left:
-  dec $10
-  lda $10
-  and #$1f
-  cmp #$1f
-  beq collision
-  rts
-collision:
-  jmp gameover
 
 
 readkeys:
@@ -252,18 +112,142 @@ illegalMove:
   rts
 
 
-generateApplePosition:
-  ;load a new random byte into $00
-  lda $fe
-  sta $00
+checkCollision:
+  jsr checkAppleCollision
+  jsr checkSnakeCollision
+  rts
 
-  ;load a new random number from 2 to 5 into $01
+
+checkAppleCollision:
+  lda $00
+  cmp $10
+  bne doneCheckingAppleCollision
+  lda $01
+  cmp $11
+  bne doneCheckingAppleCollision
+
+  ;eat apple
+  inc $03
+  inc $03 ;increase length
   lda $fe
-  and #$3
+  jsr generateApplePosition
+doneCheckingAppleCollision:
+  rts
+
+
+checkSnakeCollision:
+  ldx #2 ;start with second segment
+snakeCollisionLoop:
+  lda $10,x
+  cmp $10
+  bne continueCollisionLoop
+
+maybeCollided:
+  lda $11,x
+  cmp $11
+  beq didCollide
+
+continueCollisionLoop:
+  inx
+  inx
+  cpx $03          ;got to last section with no collision
+  beq didntCollide
+  jmp snakeCollisionLoop
+
+didCollide:
+  lda #7
+  sta $30
+  jmp collision
+didntCollide:
+  rts
+
+
+updateSnake:
+  ldx $03 ;location of length
+  dex ;last pair index is length - 1
+  txa
+updateloop:
+  lda $10,x
+  sta $12,x
+  dex
+  bpl updateloop
+
+  lda $02
+  lsr
+  bcs up
+  lsr
+  bcs right
+  lsr
+  bcs down
+  lsr
+  bcs left
+up:
+  lda $10
+  sec
+  sbc #$20
+  sta $10
+  bcc upup
+  rts
+upup:
+  dec $11
+  lda #$1
+  cmp $11
+  beq collision
+  rts
+right:
+  inc $10
+  lda #$1f
+  bit $10
+  beq collision
+  rts
+down:
+  lda $10
   clc
-  adc #$2
-  sta $01
+  adc #$20
+  sta $10
+  bcs downdown
+  rts
+downdown:
+  inc $11
+  lda #$6
+  cmp $11
+  beq collision
+  rts
+left:
+  dec $10
+  lda $10
+  and #$1f
+  cmp #$1f
+  beq collision
+  rts
+collision:
+  jmp gameover
 
+
+drawApple:
+  ldy #0
+  lda $fe
+  sta ($00),y
+  rts
+
+
+drawSnake:
+  ldx #0
+  lda foreground
+  sta ($10,x)
+  ldx $03
+  lda background
+  sta ($10,x)
+  rts
+
+
+spinwheels:
+  ldx #0
+spinloop:
+  nop
+  nop
+  dex
+  bne spinloop
   rts
 
 
