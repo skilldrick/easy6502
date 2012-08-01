@@ -502,147 +502,76 @@ label, which increments `X` until it is equal to `$05`. After that we return to
 the next instruction, `JSR end`, which jumps to the end of the file. This
 illustrates how `JSR` and `RTS` can be used together to create modular code.
 
-<!-- This section is all about installing software. Let's leave that till it's necessary.
 
-There are a few things you'll want on your computer in order to get up and
-running.  The first is an assembler. This is the program that converts your
-assembly language into machine code. The second is a monitor. This is like a
-debugger - it lets you step through your program from any point and inspect the
-memory and registers. At some point you'll want an Atari emulator, so you run
-your programs in their natural habitat, but we'll leave that for now.
+<h2 id='snake'>Creating a game</h2>
 
-I'm going to assume you're using a Mac. All the tools I'm going to recommend
-will work cross-platform, but the installation instructions might be different.
+Now, let's put all this knowledge to good use, and make a game! We're going to
+be making a really simple version of the classic game 'Snake'.
 
-Finally, a warning. We'll mainly be representing numbers and memory locations
-in [hexadecimal format](http://en.wikipedia.org/wiki/Hexadecimal). If that
-means nothing to you, click on that link there.
+The simulator widget below contains the entire source code of the game. I'll
+explain how it works in the following sections.
+
+{% include snake.html %}
 
 
+###Overall structure###
 
-###The assembler
+After the initial block of comments (lines starting with semicolons), the first
+two lines are:
 
-We'll be using the DASM assembler. If you have
-[Homebrew](http://mxcl.github.com/homebrew/) installed with version 0.9 or
-later, installation should be as easy as
+    jsr init
+    jsr loop
 
-    brew install dasm
+`init` and `loop` are both subroutines. `init` initializes the game state, and
+`loop` is the main game loop.
 
-Otherwise, [here's a link to download
-it](http://mac.softpedia.com/progDownload/DASM-Download-34013.html) and [here are
-some instructions on installing it](http://blog.feltpad.net/dasm-on-mac-osx/).
+The `loop` subroutine itself just calls a number of subroutines sequentially,
+before looping back on itself:
 
-###The monitor
+    loop:
+      jsr readkeys
+      jsr checkCollision
+      jsr updateSnake
+      jsr drawApple
+      jsr drawSnake
+      jsr spinwheels
+      jmp loop
 
-To make sense of our assembled files, we'll run them in a monitor. The best one
-I've found so far is called [py65](https://github.com/mnaberez/py65). You
-should just be able to install it with
-
-    easy_install -U py65
-
-but if you have trouble [go to the Github page](https://github.com/mnaberez/py65).
-
-<h2 id="first-program">Our first program</h2>
-
-Now, let's try writing a working program. Fire up your favourite text editor
-and enter this:
-
-      processor 6502
-      ORG $C000
-
-      LDA #$01
-      STA $01
-      LDA #$0a
-      STA $02
-      LDA #$0f
-      STA $03
-      BRK
-
-Make sure each line has a two-space indent (the left margin is saved for
-labels). Save the file as `example.asm`.
-
-Now, go to the terminal and run:
-
-    dasm example.asm -f3 -v1 -oexample.bin
-
-The `-f` flag is the output format. You always want that to be `3`. `-v` is for
-verbose (there are *five* different verbosity levels - possibly slightly
-excessive) and `-o` specifies the output filename (in this case `example.bin`).
-
-You can use the `hexdump` tool to see what this program looks like. `hexdump`
-outputs each byte in the program as a hex pair. Run `hexdump example.bin` to
-see the bytes. This can be a useful debugging tool.
-
-Hopefully this will compile without error, and you'll have a new file called
-`example.bin` in your directory. The next step is to load this file up in the
-py65 monitor program. To start the monitor, run `py65mon`. This should open up
-with a load of output, and give you a `.` prompt. At the prompt type:
-
-    .load example.bin c000
-
-This will load the file into the memory location c000. The output should look
-something like:
-
-    Wrote +13 bytes from $c000 to $c00c
-
-We can use the `mem` command to inspect the memory in that byte range like so:
-
-    .mem c000:c00c
-
-This should output something like:
-
-    c000:  a9  01  85  01  a9  0a  85  02  a9  0f  85  03  00
-
-which should be what `hexdump` output as well. We can also convert the machine
-code back into assembler language with the `disassemble` command:
-
-    .disassemble c000:c00c
-
-which will output a list of the bytes and their equivalent assembly language
-instructions.  By this point you should see that there is basically a
-one-to-one mapping between assembly language instructions and compiled bytes.
-We really are speaking the computer's language now.
-
-You may notice that the first two lines of the `.asm` file aren't in the
-disassembly - these were just instructions to the compiler so they don't end up in
-the compiled program.
-
-###Stepping through the program
-
-With this program loaded into the monitor, we can step through it to see how
-the computer reacts to each of the instructions. Machine code is read
-instruction-by-instruction by the processor. The computer keeps track of the current
-instruction using its program counter, which increments after every instruction. To
-step through our program we'll first have to move the program counter to the start
-of the program. This can be done like so:
-
-    .registers pc=c000
-
-This sets the `pc` (program counter) register to the memory location of the first
-instruction of our program. You'll see in the output that `PC` is now `c000`.
-
-Type `step` to execute the first instruction. The first thing to be output
-(confusingly) is the next instruction (which hasn't been executed yet). After
-that the values of the registers will be output. You'll hopefully notice that
-two of the registers have changed. `PC` has increased to `c002` and `AC` is now
-`01`. `LDA #$01` means "Load the number 1 into register A". The `$` denotes
-hexadecimal values, and the `#` means "this actual number" rather than the
-memory location `$01`.
-
-Type `step` again to execute the next command. `STA $01` means "Store the value
-in register A into the memory location $01". We can view the contents of memory
-in the bytes from `$01` to `$03` with the command:
-
-    .mem 01:03
-
-You'll see from this output that the value 1 has been stored in the second byte
-of memory. Now keep stepping through the code, keeping an eye on the A register
-and inspecting the memory in the first three bytes, until you reach the end of
-the code. Once you've finished, we'll have stored the values `$01`, `$0a` and
-`$0f` into memory locations `$01`, `$02` and `$03`. Pretty awesome eh? You
-can't do *that* in JavaScript!
-
--->
+First, `readkeys` checks to see if one of the direction keys (W, A, S, D) was
+pressed, and if so, sets the direction of the snake accordingly. Then,
+`checkCollision` checks to see if the snake collided with itself or the apple.
+`updateSnake` updates the internal representation of the snake, based on its
+direction. Next, the apple and snake are drawn. Finally, `spinWheels` makes the
+processor do some busy work, to stop the game from running too quickly. Think
+of it like a sleep command. The game keeps running until the snake collides
+with the wall or itself.
 
 
+###Zero page usage###
 
+The zero page of memory is used to store a number of game state variables, as
+noted in the comment block at the top of the game. Everything in `$00`, `$01`
+and `$10` upwards is a pair of bytes representing a two-byte memory location
+that will be looked up using indirect addressing.  These memory locations will
+all be between `$0200` and `$05ff` - the section of memory corresponding to the
+simulator display. For example, if `$00` and `$01` contained the values `$01`
+and `$02`, they would be referring to the second pixel of the display (`$0201`
+- remember, the least significant byte comes first in indirect addressing).
+
+The first two bytes hold the location of the apple. This is updated every time
+the snake eats the apple. Byte `$02` contains the current direction. `1` means
+up, `2` right, `4` down, and `8` left. Each of these values is a power of 2,
+thus it is represented by a binary number with a single `1`:
+
+    1 => 0001
+    2 => 0010
+    4 => 0100
+    8 => 1000
+
+The reasoning behind this scheme will become clear later.
+
+Finally, byte `$03` contains the current length of the snake, in terms of bytes
+in memory (so a length of 4 means 2 pixels).
+
+
+###Initialization###
