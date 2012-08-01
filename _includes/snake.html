@@ -17,12 +17,12 @@
   jsr loop
 
 init:
-  jsr initsnake
+  jsr initSnake
   jsr generateApplePosition
   rts
 
 
-initsnake:
+initSnake:
   lda #2  ;start direction
   sta $02
   lda #4  ;start length

@@ -575,3 +575,56 @@ in memory (so a length of 4 means 2 pixels).
 
 
 ###Initialization###
+
+The `init` subroutine defers to two subroutines, `initSnake` and
+`generateApplePosition`. `initSnake` sets the snake direction, length, and then
+loads the initial memory locations of the snake head and body. The byte pair at
+`$10` contains the screen location of the head, the pair at `$12` contains the
+location of the single body segment, and `$14` contains the location of the
+tail (the tail is the last segment of the body and is drawn in black to keep
+the snake moving). This happens in the following code:
+
+    lda #$11
+    sta $10
+    lda #$10
+    sta $12
+    lda #$0f
+    sta $14
+    lda #$04
+    sta $11
+    sta $13
+    sta $15
+
+This loads the value `$11` into the memory location `$10`, the value `$10` into
+`$12`, and `$0f` into `$14`. It then loads the value `$04` into `$11`, `$13`
+and `$15`. This leads to memory like this:
+
+    0010: 11 04 10 04 0f 04
+
+which represents the indirectly-addressed memory locations `$0411`, `$0410` and
+`$04ff` (three pixels in the middle of the display). I'm labouring this point,
+but it's important to fully grok how indirect addressing works.
+
+The next subroutine, `generateApplePosition`, sets the apple location to a
+random position on the display. First, it loads a random byte into the
+accumulator (`$fe` is a random number generator in this simulator). This is
+stored into `$00`. Next, a different random byte is loaded into the
+accumulator, which is then `AND`-ed with the value `$03`. This part requires a
+bit of a detour.
+
+The hex value `$03` is represented in binary as `00000111`. The `AND` opcode
+performs a bitwise AND of the argument with the accumulator. For example, if
+the accumulator contains the binary value `01010101`, then the result of `AND`
+with `00000111` will be `00000101`.
+
+The effect of this is to mask out the least significant three bytes of the
+accumulator, setting the others to zero. This converts a number in the range of
+0-255 to a number in the range of 0-3.
+
+After this, the value `2` is added to the accumulator, to create a final random
+number in the range 2-5.
+
+The result of this subroutine is to load a random byte into `$00`, and a random
+number between 2 and 5 into `$01`. Because the display memory is
+`$0200`-`$05ff`, the byte pair at `$00` will be a random position anywhere on
+the display.
