@@ -560,15 +560,8 @@ and `$02`, they would be referring to the second pixel of the display (`$0201`
 
 The first two bytes hold the location of the apple. This is updated every time
 the snake eats the apple. Byte `$02` contains the current direction. `1` means
-up, `2` right, `4` down, and `8` left. Each of these values is a power of 2,
-thus it is represented by a binary number with a single `1`:
-
-    1 => 0001
-    2 => 0010
-    4 => 0100
-    8 => 1000
-
-The reasoning behind this scheme will become clear later.
+up, `2` right, `4` down, and `8` left.  The reasoning behind these numbers will
+become clear later.
 
 Finally, byte `$03` contains the current length of the snake, in terms of bytes
 in memory (so a length of 4 means 2 pixels).
@@ -619,12 +612,149 @@ with `00000111` will be `00000101`.
 
 The effect of this is to mask out the least significant three bytes of the
 accumulator, setting the others to zero. This converts a number in the range of
-0-255 to a number in the range of 0-3.
+0&ndash;255 to a number in the range of 0&ndash;3.
 
 After this, the value `2` is added to the accumulator, to create a final random
-number in the range 2-5.
+number in the range 2&ndash;5.
 
 The result of this subroutine is to load a random byte into `$00`, and a random
-number between 2 and 5 into `$01`. Because the display memory is
-`$0200`-`$05ff`, the byte pair at `$00` will be a random position anywhere on
-the display.
+number between 2 and 5 into `$01`. Because the least significant byte comes
+first with indirect addressing, this translates into a memory address between
+`$0200` and `$05ff`: the exact range used to draw the display.
+
+
+###The game loop###
+
+Nearly all games have at their heart a game loop. All game loops have the same
+basic form: accept user input, update the game state, and render the game
+state. This loop is no different.
+
+
+####Reading the input####
+
+The first subroutine, `readKeys`, takes the job of accepting user input. The
+memory location `$ff` holds the ascii code of the most recent key press in this
+simulator. The value is loaded into the accumulator, then compared to `$77`
+(the hex code for W), `$64` (D), `$73` (S) and `$61`. If any of these
+comparisons are successful, the program branches to the appropriate section.
+Each section (`upKey', 'rightKey', etc.) first checks to see if the current
+direction is the opposite of the new direction. This requires another little detour.
+
+As stated before, the four directions are represented internally by the numbers
+1, 2, 4 and 8. Each of these numbers is a power of 2, thus they are represented
+by a binary number with a single `1`:
+
+    1 => 0001 (up)
+    2 => 0010 (right)
+    4 => 0100 (down)
+    8 => 1000 (left)
+
+The `BIT` opcode is similar to `AND`, but the calculation is only used to set
+the zero flag - the actual result is discarded. The zero flag is set only if the
+result of AND-ing the accumulator with argument is zero. When we're looking at
+powers of two, the zero flag will only be set if the two numbers are not the
+same. For example, `0001 AND 0001` is not zero, but `0001 AND 0010` is zero.
+
+So, looking at `upKey`, if the current direction is down (4), the bit test will
+be zero. `BNE` means "branch if the zero flag is clear", so in this case we'll
+branch to `illegalMove`, which just returns from the subroutine. Otherwise, the
+new direction (1 in this case) is stored in the appropriate memory location.
+
+
+####Updating the game state####
+
+The next subroutine, `checkCollision`, defers to `checkAppleCollision` and
+`checkSnakeCollision`. `checkAppleCollision` just checks to see if the two
+bytes holding the location of the apple match the two bytes holding the
+location of the head. If they do, the length is increased and a new apple
+position is generated.
+
+`checkSnakeCollision` loops through the snake's body segments, checking each
+byte pair against the head pair. If there is a match, then game over.
+
+After collision detection, we update the snake's location. This is done at a
+high level like so: First, move each byte pair of the body up one position in
+memory. Second, update the head according to the current direction. Finally, if
+the head is out of bounds, handle it as a collision. I'll illustrate this with
+some ascii art. Each pair of brackets contains an x,y coordinate rather than a
+pair of bytes for simplicity.
+
+      0    1    2    3    4
+    Head                 Tail
+
+    [1,5][1,4][1,3][1,2][2,2]    Starting position
+
+    [1,5][1,4][1,3][1,2][1,2]    Value of (3) is copied into (4)
+
+    [1,5][1,4][1,3][1,2][1,2]    Value of (2) is copied into (3)
+
+    [1,5][1,4][1,3][1,2][1,2]    Value of (1) is copied into (2)
+
+    [1,5][1,4][1,3][1,2][1,2]    Value of (0) is copied into (1)
+
+    [0,4][1,4][1,3][1,2][1,2]    Value of (0) is updated based on direction
+
+At a low level, this subroutine is slightly more complex. First, the length is
+loaded into the `X` register, which is then decremented. The snippet below
+shows the starting memory for the snake.
+
+    Memory location: $10 $11 $12 $13 $14 $15
+
+    Value:           $11 $04 $10 $04 $0f $04
+
+The length is initialized to `4`, so `X` starts off as `3`. `LDA $10,x` loads the
+value of `$13` into `A`, then `STA $12,x` stores this value into `$15`. `X` is
+decremented, and we loop. Now `X` is `2`, so we load `$12` and store it into
+`$14`. This loops while `X` is positive (`BPL` means "branch if positive").
+
+Once the values have been shifted down the snake, we have to work out what to
+do with the head. The direction is first loaded into `A`. `LSR` means "logical
+shift right", or "shift all the bits one position to the right". The least
+significant bit is shifted into the carry flag, so if the accumulator is `1`,
+after `LSR` it is `0`, with the carry flag set.
+
+To test whether the direction is `1`, `2`, `4` or `8`, the code continually
+shifts right until the carry is set. One `LSR` means "up", two means "right",
+and so on.
+
+The next bit updates the head of the snake depending on the direction. This is
+probably the most complicated part of the code, and it's all reliant on how
+memory locations map to the screen, so let's look at that in more detail.
+
+You can think of the screen as four horizontal strips of 32 &times; 8 pixels.
+These strips map to `$0200-$02ff`, `$0300-$03ff`, `$0400-$04ff` and `$0500-$05ff`.
+The first rows of pixels are `$0200-$021f`, `$0220-$023f`, `$0240-$025f`, etc.
+
+As long as you're moving within one of these horizontal strips, things are
+simple. For example, to move right, just incrememnt the least significant byte
+(e.g. `$0200` becomes `$0201`). To go down, add `$20` (e.g. `$0200` becomes
+`$0220`). Left and up are the reverse.
+
+Going between sections is more complicated, as we have to take into account the
+most significant byte as well. For example, going down from `$02e1` should lead
+to `$0301`. Luckily, this is fairly easy to accomplish. Adding `$20` to `$e1`
+results in `$01` and sets the carry bit. If the carry bit was set, we know we
+also need to increment the most significant byte.
+
+After a move in each direction, we also need to check to see if the head
+would become out of bounds. This is handled differently for each direction. For
+left and right, we can check to see if the head has effectively "wrapped
+around". Going right from `$021f` by incrementing the least significant byte
+would lead to `$0220`, but this is actually jumping from the last pixel of the
+first row to the first pixel of the second row. So, every time we move right,
+we need to check if the new least significant byte is a multiple of `$20`. This
+is done using a bit check against the mask `$1f`. Hopefully the illustration
+below will show you how masking out the lowest 5 bits reveals whether a number
+is a multiple of `$20` or not.
+
+    $20: 0010 0000
+    $40: 0100 0000
+    $60: 0110 0000
+
+    $1f: 0001 1111
+
+I won't explain in depth how each of the directions work, but the above
+explanation should give you enough to work it out with a bit of study.
+
+
+####Rendering the game####

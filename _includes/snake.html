@@ -68,15 +68,15 @@ loop:
 readKeys:
   lda $ff
   cmp #$77
-  beq upkey
+  beq upKey
   cmp #$64
-  beq rightkey
+  beq rightKey
   cmp #$73
-  beq downkey
+  beq downKey
   cmp #$61
-  beq leftkey
+  beq leftKey
   rts
-upkey:
+upKey:
   lda #4
   bit $02
   bne illegalMove
@@ -84,7 +84,7 @@ upkey:
   lda #1
   sta $02
   rts
-rightkey:
+rightKey:
   lda #8
   bit $02
   bne illegalMove
@@ -92,7 +92,7 @@ rightkey:
   lda #2
   sta $02
   rts
-downkey:
+downKey:
   lda #1
   bit $02
   bne illegalMove
@@ -100,7 +100,7 @@ downkey:
   lda #4
   sta $02
   rts
-leftkey:
+leftKey:
   lda #2
   bit $02
   bne illegalMove
@@ -129,7 +129,6 @@ checkAppleCollision:
   ;eat apple
   inc $03
   inc $03 ;increase length
-  lda $fe
   jsr generateApplePosition
 doneCheckingAppleCollision:
   rts
@@ -155,8 +154,6 @@ continueCollisionLoop:
   jmp snakeCollisionLoop
 
 didCollide:
-  lda #7
-  sta $30
   jmp gameOver
 didntCollide:
   rts
@@ -164,7 +161,7 @@ didntCollide:
 
 updateSnake:
   ldx $03 ;location of length
-  dex ;last pair index is length - 1
+  dex
   txa
 updateloop:
   lda $10,x
