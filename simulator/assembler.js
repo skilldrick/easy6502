@@ -325,7 +325,21 @@ function SimulatorWidget(node) {
     var LDY = setNVflagsForRegY;
 
     function BIT(value) {
-      setNVflags(value & regA);
+      if (value & 0x80) {
+        regP |= 0x80;
+      } else {
+        regP &= 0x7f;
+      }
+      if (value & 0x40) {
+        regP |= 0x40;
+      } else {
+        regP &= ~0x40;
+      }
+      if (regA & value) {
+        regP &= 0xfd;
+      } else {
+        regP |= 0x02;
+      }
     }
 
     function CLC() {
@@ -348,14 +362,16 @@ function SimulatorWidget(node) {
     function DEC(addr) {
       var value = memory.get(addr);
       value--;
-      memory.storeByte(addr, value & 0xff);
+      value &= 0xff;
+      memory.storeByte(addr, value);
       setNVflags(value);
     }
 
     function INC(addr) {
       var value = memory.get(addr);
       value++;
-      memory.storeByte(addr, value & 0xff);
+      value &= 0xff;
+      memory.storeByte(addr, value);
       setNVflags(value);
     }
 
@@ -481,8 +497,9 @@ function SimulatorWidget(node) {
       },
 
       i01: function () {
-        var addr = popByte() + regX;
-        var value = memory.getWord(addr);
+        var zp = (popByte() + regX) & 0xff;
+        var addr = memory.getWord(zp);
+        var value = memory.get(addr);
         regA |= value;
         ORA();
       },
@@ -503,7 +520,7 @@ function SimulatorWidget(node) {
       },
 
       i08: function () {
-        stackPush(regP);
+        stackPush(regP | 0x30);
         //PHP
       },
 
@@ -514,7 +531,7 @@ function SimulatorWidget(node) {
 
       i0a: function () {
         setCarryFlagFromBit7(regA);
-        regA = regA << 1;
+        regA = (regA << 1) & 0xff;
         ASL(regA);
       },
 
@@ -595,8 +612,9 @@ function SimulatorWidget(node) {
       },
 
       i21: function () {
-        var addr = (popByte() + regX) & 0xff;
-        var value = memory.getWord(addr);
+        var zp = (popByte() + regX) & 0xff;
+        var addr = memory.getWord(zp);
+        var value = memory.get(addr);
         regA &= value;
         AND();
       },
@@ -625,7 +643,7 @@ function SimulatorWidget(node) {
       },
 
       i28: function () {
-        regP = stackPop() | 0x20;
+        regP = stackPop() | 0x30; // There is no B bit!
         //PLP
       },
 
@@ -637,7 +655,7 @@ function SimulatorWidget(node) {
       i2a: function () {
         var sf = carrySet();
         setCarryFlagFromBit7(regA);
-        regA = regA << 1;
+        regA = (regA << 1) & 0xff;
         regA |= sf;
         ROL(regA);
       },
@@ -678,9 +696,8 @@ function SimulatorWidget(node) {
       },
 
       i35: function () {
-        var zp = popByte();
-        var value = memory.getWord(zp) + regX;
-        regA &= memory.get(value);
+        var addr = (popByte() + regX) & 0xff;
+        regA &= memory.get(addr);
         AND();
       },
 
@@ -725,7 +742,8 @@ function SimulatorWidget(node) {
       },
 
       i40: function () {
-        throw new Error("Not implemented");
+        regP = stackPop() | 0x30; // There is no B bit!
+        regPC = stackPop() | (stackPop() << 8);
         //RTI
       },
 
@@ -818,7 +836,8 @@ function SimulatorWidget(node) {
       },
 
       i58: function () {
-        throw new Error("Not implemented");
+        regP &= ~0x04;
+        throw new Error("Interrupts not implemented");
         //CLI
       },
 
@@ -936,7 +955,6 @@ function SimulatorWidget(node) {
       i75: function () {
         var addr = (popByte() + regX) & 0xff;
         var value = memory.get(addr);
-        setCarryFlagFromBit0(value);
         testADC(value);
         //ADC
       },
@@ -953,7 +971,8 @@ function SimulatorWidget(node) {
       },
 
       i78: function () {
-        throw new Error("Not implemented");
+        regP |= 0x04;
+        throw new Error("Interrupts not implemented");
         //SEI
       },
 
@@ -977,7 +996,7 @@ function SimulatorWidget(node) {
         var value = memory.get(addr);
         setCarryFlagFromBit0(value);
         value = value >> 1;
-        if (value) { value |= 0x80; }
+        if (sf) { value |= 0x80; }
         memory.storeByte(addr, value);
         ROR(value);
       },
@@ -1045,17 +1064,17 @@ function SimulatorWidget(node) {
       },
 
       i94: function () {
-        memory.storeByte(popByte() + regX, regY);
+        memory.storeByte((popByte() + regX) & 0xff, regY);
         //STY
       },
 
       i95: function () {
-        memory.storeByte(popByte() + regX, regA);
+        memory.storeByte((popByte() + regX) & 0xff, regA);
         //STA
       },
 
       i96: function () {
-        memory.storeByte(popByte() + regY, regX);
+        memory.storeByte((popByte() + regY) & 0xff, regX);
         //STX
       },
 
@@ -1159,17 +1178,17 @@ function SimulatorWidget(node) {
       },
 
       ib4: function () {
-        regY = memory.get(popByte() + regX);
+        regY = memory.get((popByte() + regX) & 0xff);
         LDY();
       },
 
       ib5: function () {
         regA = memory.get((popByte() + regX) & 0xff);
-        LDY();
+        LDA();
       },
 
       ib6: function () {
-        regX = memory.get(popByte() + regY);
+        regX = memory.get((popByte() + regY) & 0xff);
         LDX();
       },
 
@@ -1185,6 +1204,7 @@ function SimulatorWidget(node) {
 
       iba: function () {
         regX = regSP & 0xff;
+        LDX();
         //TSX
       },
 
@@ -1213,8 +1233,8 @@ function SimulatorWidget(node) {
       },
 
       ic1: function () {
-        var zp = popByte();
-        var addr = memory.getWord(zp) + regY;
+        var zp = (popByte() + regX) & 0xff;
+        var addr = memory.getWord(zp);
         var value = memory.get(addr);
         doCompare(regA, value);
         //CPA
@@ -1287,13 +1307,13 @@ function SimulatorWidget(node) {
       },
 
       id5: function () {
-        var value = memory.get(popByte() + regX);
+        var value = memory.get((popByte() + regX) & 0xff);
         doCompare(regA, value);
         //CMP
       },
 
       id6: function () {
-        var addr = popByte() + regX;
+        var addr = (popByte() + regX) & 0xff;
         DEC(addr);
       },
 
@@ -1404,13 +1424,12 @@ function SimulatorWidget(node) {
       if5: function () {
         var addr = (popByte() + regX) & 0xff;
         var value = memory.get(addr);
-        setCarryFlagFromBit0(value);
         testSBC(value);
         //SBC
       },
 
       if6: function () {
-        var addr = popByte() + regX;
+        var addr = (popByte() + regX) & 0xff;
         INC(addr);
       },
 
@@ -1421,7 +1440,7 @@ function SimulatorWidget(node) {
 
       if9: function () {
         var addr = popWord();
-        var value = memory(addr + regY);
+        var value = memory.get(addr + regY);
         testSBC(value);
         //SBC
       },
@@ -1445,26 +1464,23 @@ function SimulatorWidget(node) {
     };
 
     function stackPush(value) {
-      if (regSP >= 0) {
-        regSP--;
-        memory.set((regSP & 0xff) + 0x100, value & 0xff);
-      } else {
-        message("Stack full: " + regSP);
-        codeRunning = false;
+      memory.set((regSP & 0xff) + 0x100, value & 0xff);
+      regSP--;
+      if (regSP < 0) {
+        regSP &= 0xff;
+        message("6502 Stack filled! Wrapping...");
       }
     }
 
     function stackPop() {
       var value;
-      if (regSP < 0x100) {
-        value = memory.get(regSP + 0x100);
-        regSP++;
-        return value;
-      } else {
-        message("Stack empty");
-        codeRunning = false;
-        return 0;
+      regSP++;
+      if (regSP >= 0x100) {
+        regSP &= 0xff;
+        message("6502 Stack emptied! Wrapping...");
       }
+      value = memory.get(regSP + 0x100);
+      return value;
     }
 
     // popByte() - Pops a byte
@@ -1492,7 +1508,8 @@ function SimulatorWidget(node) {
 
     function multiExecute() {
       if (!debug) {
-        //prime number of iterations to avoid aliasing effects
+        // use a prime number of iterations to avoid aliasing effects
+
         for (var w = 0; w < 97; w++) {
           execute();
         }
@@ -1580,7 +1597,7 @@ function SimulatorWidget(node) {
         }
       }
       if (addr === 0) {
-        alert("Unable to find/parse given address/label");
+        message("Unable to find/parse given address/label");
       } else {
         regPC = addr;
       }

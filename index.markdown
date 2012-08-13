@@ -637,7 +637,7 @@ memory location `$ff` holds the ascii code of the most recent key press in this
 simulator. The value is loaded into the accumulator, then compared to `$77`
 (the hex code for W), `$64` (D), `$73` (S) and `$61`. If any of these
 comparisons are successful, the program branches to the appropriate section.
-Each section (`upKey', 'rightKey', etc.) first checks to see if the current
+Each section (`upKey`, `rightKey`, etc.) first checks to see if the current
 direction is the opposite of the new direction. This requires another little detour.
 
 As stated before, the four directions are represented internally by the numbers
