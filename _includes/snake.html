@@ -230,10 +230,10 @@ drawApple:
 
 drawSnake:
   ldx #0
-  lda foreground
+  lda #1
   sta ($10,x)
   ldx $03
-  lda background
+  lda #0
   sta ($10,x)
   rts
 
@@ -247,12 +247,6 @@ spinloop:
   bne spinloop
   rts
 
-
-background:
-  dcb $0
-
-foreground:
-  dcb $1
 
 gameOver:
 {% include end.html %}
