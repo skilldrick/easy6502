@@ -865,7 +865,7 @@ function SimulatorWidget(node) {
       },
 
       i60: function () {
-        regPC = (stackPop() + 1) | (stackPop() << 8);
+        regPC = (stackPop() | (stackPop() << 8)) + 1;
         //RTS
       },
 
