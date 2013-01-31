@@ -865,7 +865,7 @@ function SimulatorWidget(node) {
       },
 
       i60: function () {
-        regPC = (stackPop() + 1) | (stackPop() << 8);
+        regPC = (stackPop() | (stackPop() << 8)) + 1;
         //RTS
       },
 
@@ -1625,7 +1625,7 @@ function SimulatorWidget(node) {
       regA = regX = regY = 0;
       regPC = 0x600;
       regSP = 0xff;
-      regP = 0x20;
+      regP = 0x30;
       updateDebugInfo();
     }
 
@@ -1849,7 +1849,7 @@ function SimulatorWidget(node) {
       codeLen = 0;
       for (var i = 0; i < lines.length; i++) {
         if (!assembleLine(lines[i], i)) {
-          codeAssembleddOK = false;
+          codeAssembledOK = false;
           break;
         }
       }
@@ -2429,7 +2429,7 @@ function SimulatorWidget(node) {
       var byte;
       var modeAndCode;
 
-      while (currentAddress < endAddress - 1) {
+      while (currentAddress < endAddress) {
         inst = createInstruction(currentAddress);
         byte = memory.get(currentAddress);
         inst.addByte(byte);
