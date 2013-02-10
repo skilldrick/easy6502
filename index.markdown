@@ -726,7 +726,7 @@ These strips map to `$0200-$02ff`, `$0300-$03ff`, `$0400-$04ff` and `$0500-$05ff
 The first rows of pixels are `$0200-$021f`, `$0220-$023f`, `$0240-$025f`, etc.
 
 As long as you're moving within one of these horizontal strips, things are
-simple. For example, to move right, just incrememnt the least significant byte
+simple. For example, to move right, just increment the least significant byte
 (e.g. `$0200` becomes `$0201`). To go down, add `$20` (e.g. `$0200` becomes
 `$0220`). Left and up are the reverse.
 
