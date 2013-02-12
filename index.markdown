@@ -595,7 +595,7 @@ and `$15`. This leads to memory like this:
     0010: 11 04 10 04 0f 04
 
 which represents the indirectly-addressed memory locations `$0411`, `$0410` and
-`$04ff` (three pixels in the middle of the display). I'm labouring this point,
+`$040f` (three pixels in the middle of the display). I'm labouring this point,
 but it's important to fully grok how indirect addressing works.
 
 The next subroutine, `generateApplePosition`, sets the apple location to a
@@ -681,18 +681,18 @@ pair of bytes for simplicity.
 
       0    1    2    3    4
     Head                 Tail
-
+    
     [1,5][1,4][1,3][1,2][2,2]    Starting position
 
     [1,5][1,4][1,3][1,2][1,2]    Value of (3) is copied into (4)
-
-    [1,5][1,4][1,3][1,2][1,2]    Value of (2) is copied into (3)
-
-    [1,5][1,4][1,3][1,2][1,2]    Value of (1) is copied into (2)
-
-    [1,5][1,4][1,3][1,2][1,2]    Value of (0) is copied into (1)
-
-    [0,4][1,4][1,3][1,2][1,2]    Value of (0) is updated based on direction
+    
+    [1,5][1,4][1,3][1,3][1,2]    Value of (2) is copied into (3)
+    
+    [1,5][1,4][1,4][1,3][1,2]    Value of (1) is copied into (2)
+    
+    [1,5][1,5][1,4][1,3][1,2]    Value of (0) is copied into (1)
+    
+    [0,5][1,5][1,4][1,3][1,2]    Value of (0) is updated based on direction
 
 At a low level, this subroutine is slightly more complex. First, the length is
 loaded into the `X` register, which is then decremented. The snippet below
