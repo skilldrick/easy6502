@@ -686,13 +686,13 @@ pair of bytes for simplicity.
 
     [1,5][1,4][1,3][1,2][1,2]    Value of (3) is copied into (4)
 
-    [1,5][1,4][1,3][1,2][1,2]    Value of (2) is copied into (3)
+    [1,5][1,4][1,3][1,3][1,2]    Value of (2) is copied into (3)
 
-    [1,5][1,4][1,3][1,2][1,2]    Value of (1) is copied into (2)
+    [1,5][1,4][1,4][1,3][1,2]    Value of (1) is copied into (2)
 
-    [1,5][1,4][1,3][1,2][1,2]    Value of (0) is copied into (1)
+    [1,5][1,5][1,4][1,3][1,2]    Value of (0) is copied into (1)
 
-    [0,4][1,4][1,3][1,2][1,2]    Value of (0) is updated based on direction
+    [0,4][1,5][1,4][1,3][1,2]    Value of (0) is updated based on direction
 
 At a low level, this subroutine is slightly more complex. First, the length is
 loaded into the `X` register, which is then decremented. The snippet below
