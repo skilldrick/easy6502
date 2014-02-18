@@ -511,6 +511,10 @@ be making a really simple version of the classic game 'Snake'.
 The simulator widget below contains the entire source code of the game. I'll
 explain how it works in the following sections.
 
+[Willem van der Jagt](https://twitter.com/wkjagt) made a [fully annotated gist
+of this source code](https://gist.github.com/wkjagt/9043907), so follow along
+with that for more details.
+
 {% include snake.html %}
 
 
