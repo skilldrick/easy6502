@@ -6,11 +6,30 @@
 
 ; Change direction: W A S D
 
-; $00-01 => screen location of apple
-; $10-11 => screen location of snake head
-; $12-?? => snake body (in byte pairs)
-; $02    => direction (1 => up, 2 => right, 4 => down, 8 => left)
-; $03    => snake length
+define appleL    $00 ; screen location of apple
+define appleH    $01
+define headL     $10 ; screen location of snake head
+define headH     $11
+define body      $12 ; snake body (in byte pairs)
+define direction $02 ; direction (values are below)
+define length    $03 ; snake length
+
+; Directions (each using a separate bit)
+define movingUp     #1
+define movingRight  #2
+define movingDown   #4
+define movingLeft   #8
+
+; ASCII values of keys controlling the snake
+define ASCII_w   #$77
+define ASCII_a   #$61
+define ASCII_s   #$73
+define ASCII_d   #$64
+
+; System variables
+define random    $fe
+define lastKey   $ff
+define screen    $200
 
 
   jsr init
@@ -23,34 +42,39 @@ init:
 
 
 initSnake:
-  lda #2  ;start direction
-  sta $02
-  lda #4  ;start length
-  sta $03
+  lda {movingRight}  ;start direction
+  sta {direction}
+
+  lda #4  ;start length (2 segments)
+  sta {length}
+  
   lda #$11
-  sta $10
+  sta {headL}
+  
   lda #$10
-  sta $12
+  sta {body}
+  
   lda #$0f
-  sta $14
+  sta $14 ; body segment 1
+  
   lda #$04
-  sta $11
-  sta $13
-  sta $15
+  sta {headH}
+  sta $13 ; body segment 1
+  sta $15 ; body segment 2
   rts
 
 
 generateApplePosition:
   ;load a new random byte into $00
-  lda $fe
-  sta $00
+  lda {random}
+  sta {appleL}
 
   ;load a new random number from 2 to 5 into $01
-  lda $fe
+  lda {random}
   and #$03 ;mask out lowest 2 bits
   clc
   adc #2
-  sta $01
+  sta {appleH}
 
   rts
 
@@ -66,47 +90,47 @@ loop:
 
 
 readKeys:
-  lda $ff
-  cmp #$77
+  lda {lastKey}
+  cmp {ASCII_w}
   beq upKey
-  cmp #$64
+  cmp {ASCII_d}
   beq rightKey
-  cmp #$73
+  cmp {ASCII_s}
   beq downKey
-  cmp #$61
+  cmp {ASCII_a}
   beq leftKey
   rts
 upKey:
-  lda #4
-  bit $02
+  lda {movingDown}
+  bit {direction}
   bne illegalMove
 
-  lda #1
-  sta $02
+  lda {movingUp}
+  sta {direction}
   rts
 rightKey:
-  lda #8
-  bit $02
+  lda {movingLeft}
+  bit {direction}
   bne illegalMove
 
-  lda #2
-  sta $02
+  lda {movingRight}
+  sta {direction}
   rts
 downKey:
-  lda #1
-  bit $02
+  lda {movingUp}
+  bit {direction}
   bne illegalMove
 
-  lda #4
-  sta $02
+  lda {movingDown}
+  sta {direction}
   rts
 leftKey:
-  lda #2
-  bit $02
+  lda {movingRight}
+  bit {direction}
   bne illegalMove
 
-  lda #8
-  sta $02
+  lda {movingLeft}
+  sta {direction}
   rts
 illegalMove:
   rts
@@ -119,16 +143,16 @@ checkCollision:
 
 
 checkAppleCollision:
-  lda $00
-  cmp $10
+  lda {appleL}
+  cmp {headL}
   bne doneCheckingAppleCollision
-  lda $01
-  cmp $11
+  lda {appleH}
+  cmp {headH}
   bne doneCheckingAppleCollision
 
   ;eat apple
-  inc $03
-  inc $03 ;increase length
+  inc {length}
+  inc {length} ;increase length
   jsr generateApplePosition
 doneCheckingAppleCollision:
   rts
@@ -137,19 +161,19 @@ doneCheckingAppleCollision:
 checkSnakeCollision:
   ldx #2 ;start with second segment
 snakeCollisionLoop:
-  lda $10,x
-  cmp $10
+  lda {headL},x
+  cmp {headL}
   bne continueCollisionLoop
 
 maybeCollided:
-  lda $11,x
-  cmp $11
+  lda {headH},x
+  cmp {headH}
   beq didCollide
 
 continueCollisionLoop:
   inx
   inx
-  cpx $03          ;got to last section with no collision
+  cpx {length}          ;got to last section with no collision
   beq didntCollide
   jmp snakeCollisionLoop
 
@@ -160,16 +184,16 @@ didntCollide:
 
 
 updateSnake:
-  ldx $03 ;location of length
+  ldx {length} ;location of length
   dex
   txa
 updateloop:
-  lda $10,x
-  sta $12,x
+  lda {headL},x
+  sta {body},x
   dex
   bpl updateloop
 
-  lda $02
+  lda {direction}
   lsr
   bcs up
   lsr
@@ -179,40 +203,40 @@ updateloop:
   lsr
   bcs left
 up:
-  lda $10
+  lda {headL}
   sec
   sbc #$20
-  sta $10
+  sta {headL}
   bcc upup
   rts
 upup:
-  dec $11
+  dec {headH}
   lda #$1
-  cmp $11
+  cmp {headH}
   beq collision
   rts
 right:
-  inc $10
+  inc {headL}
   lda #$1f
-  bit $10
+  bit {headL}
   beq collision
   rts
 down:
-  lda $10
+  lda {headL}
   clc
   adc #$20
-  sta $10
+  sta {headL}
   bcs downdown
   rts
 downdown:
-  inc $11
+  inc {headH}
   lda #$6
-  cmp $11
+  cmp {headH}
   beq collision
   rts
 left:
-  dec $10
-  lda $10
+  dec {headL}
+  lda {headL}
   and #$1f
   cmp #$1f
   beq collision
@@ -223,18 +247,19 @@ collision:
 
 drawApple:
   ldy #0
-  lda $fe
-  sta ($00),y
+  lda {random}
+  sta ({appleL}),y
   rts
 
 
 drawSnake:
   ldx #0
   lda #1
-  sta ($10,x)
-  ldx $03
+  sta ({headL},x) ; paint head
+  
+  ldx {length}
   lda #0
-  sta ($10,x)
+  sta ({headL},x) ; erase end of tail
   rts
 
 

@@ -1,13 +1,13 @@
 /*
-*  6502 assembler and simulator in Javascript
-*  (C)2006-2010 Stian Soreng - www.6502asm.com
-*
-*  Adapted by Nick Morgan
-*  https://github.com/skilldrick/6502js
-*
-*  Released under the GNU General Public License
-*  see http://gnu.org/licenses/gpl.html
-*/
+ *  6502 assembler and simulator in Javascript
+ *  (C)2006-2010 Stian Soreng - www.6502asm.com
+ *
+ *  Adapted by Nick Morgan
+ *  https://github.com/skilldrick/6502js
+ *
+ *  Released under the GNU General Public License
+ *  see http://gnu.org/licenses/gpl.html
+ */
 
 
 function SimulatorWidget(node) {
@@ -1667,13 +1667,7 @@ function SimulatorWidget(node) {
     // indexLine(line) - extract label if line contains one and calculate position in memory.
     // Return false if label alread exists.
     function indexLine(input) {
-      // remove comments
-      input = input.replace(/^(.*?);.*/, "$1");
-
-      // trim line
-      input = input.replace(/^\s+/, "");
-      input = input.replace(/\s+$/, "");
-
+      		
       // Figure out how many bytes this instruction takes
       var currentPC = assembler.getCurrentPC();
       assembler.assembleLine(input); //TODO: find a better way for Labels to have access to assembler
@@ -1823,9 +1817,11 @@ function SimulatorWidget(node) {
     // assembleCode()
     // "assembles" the code into memory
     function assembleCode() {
+	  const BOOTSTRAP_ADDRESS = 0x600;
+	
       simulator.reset();
       labels.reset();
-      defaultCodePC = 0x600;
+      defaultCodePC = BOOTSTRAP_ADDRESS;
       $node.find('.messages code').empty();
 
       var code = $node.find('.code').val();
@@ -1833,17 +1829,17 @@ function SimulatorWidget(node) {
       var lines = code.split("\n");
       codeAssembledOK = true;
 
-      message("Indexing labels..");
+	  message("Preprocessing ...");
+	  preprocess(lines);
 
-      defaultCodePC = 0x600;
-
+      message("Indexing labels ...");
+      defaultCodePC = BOOTSTRAP_ADDRESS;
       if (!labels.indexLines(lines)) {
         return false;
       }
-
       labels.displayMessage();
 
-      defaultCodePC = 0x600;
+      defaultCodePC = BOOTSTRAP_ADDRESS;
       message("Assembling code ...");
 
       codeLen = 0;
@@ -1872,21 +1868,72 @@ function SimulatorWidget(node) {
       message("Code assembled successfully, " + codeLen + " bytes.");
     }
 
+	// Sanitize input: remove comments and trim leading/trailing whitespace
+	function sanitize(line) {
+		// remove comments
+        var no_comments = line.replace(/^(.*?);.*/, "$1");
+
+		// trim line
+		return no_comments.replace(/^\s+/, "").replace(/\s+$/, "");
+    }
+
+	function preprocess(lines) {
+	  var table = [];
+	  const PREFIX = "__"; // Using a prefix avoids clobbering any predefined properties
+	  
+	  function lookup(key) {
+	    if (table.hasOwnProperty(PREFIX + key))
+			return table[PREFIX + key];
+		else return undefined;
+	  } 
+	  
+	  function add(key, value) {
+	    var existingValue = lookup(key)
+		if (existingValue === undefined) {
+		  table[PREFIX + key] = value;
+		}
+	  }
+      
+	  // First pass: build the substitution table
+	  for (var i = 0; i < lines.length; i++) {
+	    lines[i] = sanitize(lines[i]);
+		var match_data = lines[i].match(/^define\s+(\w+)\s+(.+)/);
+		if (match_data) {
+		  add(match_data[1], sanitize(match_data[2]));
+		  lines[i] = ""; // We're done with this preprocessor directive, so delete it
+		}
+	  }
+	  
+	  // Second pass: perform the substitutions. During a substitution round,
+	  // several symbols can be resolved at once; however, this may in turn
+	  // lead to other unresolved symbols. We can tell that we're done when a
+	  // round didn't cause any new substitutions. To protect against infinite
+	  // substitution loops we'll also put a limit on the number of rounds.
+	  for (var round = 0; round < 15; round++) {
+		var did_any_substitutions = false;
+		
+		for (var i = 0; i < lines.length; i++) {
+		  var input = sanitize(lines[i]);		
+		  var match_data = input.match(/{(\w+)}/);
+		  if (match_data) {
+			var lookupValue = lookup(match_data[1]);
+			if (lookupValue !== undefined) {
+			  lines[i] = input.replace(/{\w+}/, lookupValue); // Remove symbol and its {}
+			  did_any_substitutions = true;
+		    }
+		  }
+		}
+		
+		if (!did_any_substitutions) break; // No more changes detected
+	  }	  
+	}
+	
     // assembleLine()
     //
     // assembles one line of code.  Returns true if it assembled successfully,
     // false otherwise.
     function assembleLine(input, lineno) {
       var label, command, param, addr;
-
-      // remove comments
-
-      input = input.replace(/^(.*?);.*/, "$1");
-
-      // trim line
-
-      input = input.replace(/^\s+/, "");
-      input = input.replace(/\s+$/, "");
 
       // Find command or label
 
