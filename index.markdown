@@ -508,6 +508,29 @@ illustrates how `JSR` and `RTS` can be used together to create modular code.
 Now, let's put all this knowledge to good use, and make a game! We're going to
 be making a really simple version of the classic game 'Snake'.
 
+Even though this will be a simple version, the code will be substantially larger
+than all the previous examples. We will need to keep track of several memory
+locations together for the various aspects of the game. We can still do
+the necessary bookkeeping throughout the program ourselves, as before, but
+on a larger scale that quickly becomes tedious and can also lead to bugs that
+are difficult to spot. Instead we'll now let the assembler do some of the
+mundane work for us.
+
+In this assembler, we can define descriptive constants (or symbols) that represent
+numbers. The rest of the code can then simply use the constants instead of the
+literal number, which immediately makes it obvious what we're dealing with.
+You can use letters, digits and underscores in a name.
+
+Here's an example. Note that immediate operands are still prefixed with a `#`.
+{% include start.html %}
+  define  sysRandom  $fe ; an adress
+  define  a_dozen    $0c ; a constant
+ 
+  LDA sysRandom  ; equivalent to "LDA $fe"
+
+  LDX #a_dozen   ; equivalent to "LDX #$0c"
+{% include end.html %}
+
 The simulator widget below contains the entire source code of the game. I'll
 explain how it works in the following sections.
 
