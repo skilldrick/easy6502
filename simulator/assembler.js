@@ -1821,7 +1821,7 @@ function SimulatorWidget(node) {
     
     // Assembles the code into memory
     function assembleCode() {
-      const BOOTSTRAP_ADDRESS = 0x600;
+      BOOTSTRAP_ADDRESS = 0x600;
   
       simulator.reset();
       labels.reset();
@@ -1884,7 +1884,7 @@ function SimulatorWidget(node) {
 
     function preprocess(lines) {
       var table = [];
-      const PREFIX = "__"; // Using a prefix avoids clobbering any predefined properties
+      PREFIX = "__"; // Using a prefix avoids clobbering any predefined properties
       
       function lookup(key) {
         if (table.hasOwnProperty(PREFIX + key)) return table[PREFIX + key];
