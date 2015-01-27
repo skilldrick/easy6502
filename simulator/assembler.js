@@ -1,14 +1,15 @@
 /*
-*  6502 assembler and simulator in Javascript
-*  (C)2006-2010 Stian Soreng - www.6502asm.com
-*
-*  Adapted by Nick Morgan
-*  https://github.com/skilldrick/6502js
-*
-*  Released under the GNU General Public License
-*  see http://gnu.org/licenses/gpl.html
-*/
+ *  6502 assembler and simulator in Javascript
+ *  (C)2006-2010 Stian Soreng - www.6502asm.com
+ *
+ *  Adapted by Nick Morgan
+ *  https://github.com/skilldrick/6502js
+ *
+ *  Released under the GNU General Public License
+ *  see http://gnu.org/licenses/gpl.html
+ */
 
+'use strict';
 
 function SimulatorWidget(node) {
   var $node = $(node);
@@ -224,8 +225,7 @@ function SimulatorWidget(node) {
       return get(addr) + (get(addr + 1) << 8);
     }
 
-    // storeByte() - Poke a byte, don't touch any registers
-
+    // Poke a byte, don't touch any registers
     function storeByte(addr, value) {
       set(addr, value & 0xff);
       if ((addr >= 0x200) && (addr <= 0x5ff)) {
@@ -233,9 +233,9 @@ function SimulatorWidget(node) {
       }
     }
 
-    // storeKeypress() - Store keycode in ZP $ff
+    // Store keycode in ZP $ff
     function storeKeypress(e) {
-      value = e.which;
+      var value = e.which;
       memory.storeByte(0xff, value);
     }
 
@@ -279,7 +279,7 @@ function SimulatorWidget(node) {
     var monitoring = false;
     var executeId;
 
-    //set zero and negative processor flags based on result
+    // Set zero and negative processor flags based on result
     function setNVflags(value) {
       if (value) {
         regP &= 0xfd;
@@ -1483,17 +1483,17 @@ function SimulatorWidget(node) {
       return value;
     }
 
-    // popByte() - Pops a byte
+    // Pops a byte
     function popByte() {
       return(memory.get(regPC++) & 0xff);
     }
 
-    // popWord() - Pops a word using popByte() twice
+    // Pops a little-endian word
     function popWord() {
       return popByte() + (popByte() << 8);
     }
 
-    // runBinary() - Executes the assembled code
+    // Executes the assembled code
     function runBinary() {
       if (codeRunning) {
         // Switch OFF everything
@@ -1532,8 +1532,7 @@ function SimulatorWidget(node) {
       }
     }
 
-    // execute() - Executes one instruction.
-    //             This is the main part of the CPU simulator.
+    // Executes one instruction. This is the main part of the CPU simulator.
     function execute(debugging) {
       if (!codeRunning && !debugging) { return; }
 
@@ -1561,7 +1560,7 @@ function SimulatorWidget(node) {
       }
     }
 
-    // debugExec() - Execute one instruction and print values
+    // Execute one instruction and print values
     function debugExec() {
       //if (codeRunning) {
         execute(true);
@@ -1654,9 +1653,9 @@ function SimulatorWidget(node) {
   function Labels() {
     var labelIndex = [];
 
-    function indexLines(lines) {
+    function indexLines(lines, symbols) {
       for (var i = 0; i < lines.length; i++) {
-        if (!indexLine(lines[i])) {
+        if (!indexLine(lines[i], symbols)) {
           message("**Label already defined at line " + (i + 1) + ":** " + lines[i]);
           return false;
         }
@@ -1664,29 +1663,29 @@ function SimulatorWidget(node) {
       return true;
     }
 
-    // indexLine(line) - extract label if line contains one and calculate position in memory.
-    // Return false if label alread exists.
-    function indexLine(input) {
-      // remove comments
-      input = input.replace(/^(.*?);.*/, "$1");
-
-      // trim line
-      input = input.replace(/^\s+/, "");
-      input = input.replace(/\s+$/, "");
-
+    // Extract label if line contains one and calculate position in memory.
+    // Return false if label already exists.
+    function indexLine(input, symbols) {
+          
       // Figure out how many bytes this instruction takes
       var currentPC = assembler.getCurrentPC();
-      assembler.assembleLine(input); //TODO: find a better way for Labels to have access to assembler
+      assembler.assembleLine(input, 0, symbols); //TODO: find a better way for Labels to have access to assembler
 
       // Find command or label
       if (input.match(/^\w+:/)) {
         var label = input.replace(/(^\w+):.*$/, "$1");
+        
+        if (symbols.lookup(label)) {
+          message("**Label " + label + "is already used as a symbol; please rename one of them**");
+          return false;
+        }
+        
         return push(label + "|" + currentPC);
       }
       return true;
     }
 
-    // push() - Push label to array. Return false if label already exists.
+    // Push label to array. Return false if label already exists.
     function push(name) {
       if (find(name)) {
         return false;
@@ -1695,7 +1694,7 @@ function SimulatorWidget(node) {
       return true;
     }
 
-    // find() - Returns true if label exists.
+    // Returns true if label exists.
     function find(name) {
       var nameAndAddr;
       for (var i = 0; i < labelIndex.length; i++) {
@@ -1707,7 +1706,7 @@ function SimulatorWidget(node) {
       return false;
     }
 
-    // setPC() - Associates label with address
+    // Associates label with address
     function setPC(name, addr) {
       var nameAndAddr;
       for (var i = 0; i < labelIndex.length; i++) {
@@ -1720,7 +1719,7 @@ function SimulatorWidget(node) {
       return false;
     }
 
-    // getPC() - Get address associated with label
+    // Get address associated with label
     function getPC(name) {
       var nameAndAddr;
       for (var i = 0; i < labelIndex.length; i++) {
@@ -1819,13 +1818,14 @@ function SimulatorWidget(node) {
       ["STY", null, 0x84, 0x94, null, 0x8c, null, null, null, null, null, null, null],
       ["---", null, null, null, null, null, null, null, null, null, null, null, null]
     ];
-
-    // assembleCode()
-    // "assembles" the code into memory
+    
+    // Assembles the code into memory
     function assembleCode() {
+      const BOOTSTRAP_ADDRESS = 0x600;
+  
       simulator.reset();
       labels.reset();
-      defaultCodePC = 0x600;
+      defaultCodePC = BOOTSTRAP_ADDRESS;
       $node.find('.messages code').empty();
 
       var code = $node.find('.code').val();
@@ -1833,22 +1833,22 @@ function SimulatorWidget(node) {
       var lines = code.split("\n");
       codeAssembledOK = true;
 
-      message("Indexing labels..");
+      message("Preprocessing ...");
+      var symbols = preprocess(lines);
 
-      defaultCodePC = 0x600;
-
-      if (!labels.indexLines(lines)) {
+      message("Indexing labels ...");
+      defaultCodePC = BOOTSTRAP_ADDRESS;
+      if (!labels.indexLines(lines, symbols)) {
         return false;
       }
-
       labels.displayMessage();
 
-      defaultCodePC = 0x600;
+      defaultCodePC = BOOTSTRAP_ADDRESS;
       message("Assembling code ...");
-
+      
       codeLen = 0;
       for (var i = 0; i < lines.length; i++) {
-        if (!assembleLine(lines[i], i)) {
+        if (!assembleLine(lines[i], i, symbols)) {
           codeAssembledOK = false;
           break;
         }
@@ -1866,30 +1866,60 @@ function SimulatorWidget(node) {
         var str = lines[i].replace("<", "&lt;").replace(">", "&gt;");
         message("**Syntax error line " + (i + 1) + ": " + str + "**");
         ui.initialize();
-        return;
+        return false;
       }
 
       message("Code assembled successfully, " + codeLen + " bytes.");
+      return true;
     }
 
-    // assembleLine()
-    //
-    // assembles one line of code.  Returns true if it assembled successfully,
-    // false otherwise.
-    function assembleLine(input, lineno) {
+    // Sanitize input: remove comments and trim leading/trailing whitespace
+    function sanitize(line) {
+      // remove comments
+      var no_comments = line.replace(/^(.*?);.*/, "$1");
+  
+      // trim line
+      return no_comments.replace(/^\s+/, "").replace(/\s+$/, "");
+    }
+
+    function preprocess(lines) {
+      var table = [];
+      const PREFIX = "__"; // Using a prefix avoids clobbering any predefined properties
+      
+      function lookup(key) {
+        if (table.hasOwnProperty(PREFIX + key)) return table[PREFIX + key];
+        else return undefined;
+      }
+      
+      function add(key, value) {
+        var valueAlreadyExists = table.hasOwnProperty(PREFIX + key)
+        if (!valueAlreadyExists) {
+          table[PREFIX + key] = value;
+        }
+      }
+        
+      // Build the substitution table
+      for (var i = 0; i < lines.length; i++) {
+        lines[i] = sanitize(lines[i]);
+        var match_data = lines[i].match(/^define\s+(\w+)\s+(\S+)/);
+        if (match_data) {
+          add(match_data[1], sanitize(match_data[2]));
+          lines[i] = ""; // We're done with this preprocessor directive, so delete it
+        }
+      }
+      
+      // Callers will only need the lookup function
+      return {
+        lookup: lookup
+      }
+    }
+  
+    // Assembles one line of code.
+    // Returns true if it assembled successfully, false otherwise.
+    function assembleLine(input, lineno, symbols) {
       var label, command, param, addr;
 
-      // remove comments
-
-      input = input.replace(/^(.*?);.*/, "$1");
-
-      // trim line
-
-      input = input.replace(/^\s+/, "");
-      input = input.replace(/\s+$/, "");
-
       // Find command or label
-
       if (input.match(/^\w+:/)) {
         label = input.replace(/(^\w+):.*$/, "$1");
         if (input.match(/^\w+:[\s]*\w+.*$/)) {
@@ -1902,8 +1932,7 @@ function SimulatorWidget(node) {
         command = input.replace(/^(\w+).*$/, "$1");
       }
 
-      // Blank line?  Return.
-
+      // Nothing to do for blank lines
       if (command === "") {
         return true;
       }
@@ -1929,12 +1958,10 @@ function SimulatorWidget(node) {
 
       if (input.match(/^\w+\s+.*?$/)) {
         param = input.replace(/^\w+\s+(.*?)/, "$1");
+      } else if (input.match(/^\w+$/)) {
+        param = "";
       } else {
-        if (input.match(/^\w+$/)) {
-          param = "";
-        } else {
-          return false;
-        }
+        return false;
       }
 
       param = param.replace(/[ ]/g, "");
@@ -1942,25 +1969,24 @@ function SimulatorWidget(node) {
       if (command === "DCB") {
         return DCB(param);
       }
-
-
       for (var o = 0; o < Opcodes.length; o++) {
         if (Opcodes[o][0] === command) {
           if (checkSingle(param, Opcodes[o][11])) { return true; }
-          if (checkImmediate(param, Opcodes[o][1])) { return true; }
-          if (checkZeroPage(param, Opcodes[o][2])) { return true; }
-          if (checkZeroPageX(param, Opcodes[o][3])) { return true; }
-          if (checkZeroPageY(param, Opcodes[o][4])) { return true; }
-          if (checkAbsoluteX(param, Opcodes[o][6])) { return true; }
-          if (checkAbsoluteY(param, Opcodes[o][7])) { return true; }
-          if (checkIndirect(param, Opcodes[o][8])) { return true; }
-          if (checkIndirectX(param, Opcodes[o][9])) { return true; }
-          if (checkIndirectY(param, Opcodes[o][10])) { return true; }
-          if (checkAbsolute(param, Opcodes[o][5])) { return true; }
+          if (checkImmediate(param, Opcodes[o][1], symbols)) { return true; }
+          if (checkZeroPage(param, Opcodes[o][2], symbols)) { return true; }
+          if (checkZeroPageX(param, Opcodes[o][3], symbols)) { return true; }
+          if (checkZeroPageY(param, Opcodes[o][4], symbols)) { return true; }
+          if (checkAbsoluteX(param, Opcodes[o][6], symbols)) { return true; }
+          if (checkAbsoluteY(param, Opcodes[o][7], symbols)) { return true; }
+          if (checkIndirect(param, Opcodes[o][8], symbols)) { return true; }
+          if (checkIndirectX(param, Opcodes[o][9], symbols)) { return true; }
+          if (checkIndirectY(param, Opcodes[o][10], symbols)) { return true; }
+          if (checkAbsolute(param, Opcodes[o][5], symbols)) { return true; }
           if (checkBranch(param, Opcodes[o][12])) { return true; }
         }
       }
-      return false; // Unknown opcode
+      
+      return false; // Unknown syntax
     }
 
     function DCB(param) {
@@ -1984,8 +2010,72 @@ function SimulatorWidget(node) {
       }
       return true;
     }
+    
+    // Try to parse the given parameter as a byte operand.
+    // Returns the (positive) value if successful, otherwise -1
+    function tryParseByteOperand(param, symbols) {
+      if (param.match(/^\w+$/)) {
+        var lookupVal = symbols.lookup(param); // Substitute symbol by actual value, then proceed
+        if (lookupVal) {
+          param = lookupVal;
+        }
+      }
+      
+      var value;
+    
+      // Is it a hexadecimal operand?
+      var match_data = param.match(/^\$([0-9a-f]{1,2})$/i);
+      if (match_data) {
+        value = parseInt(match_data[1], 16);
+      } else {
+        // Is it a decimal operand?
+        match_data = param.match(/^([0-9]{1,3})$/i);
+        if (match_data) {
+          value = parseInt(match_data[1], 10);
+        }
+      }
+      
+      // Validate range
+      if (value >= 0 && value <= 0xff) {
+        return value;
+      } else {
+        return -1;  
+      }
+    }
+    
+    // Try to parse the given parameter as a word operand.
+    // Returns the (positive) value if successful, otherwise -1
+    function tryParseWordOperand(param, symbols) {
+      if (param.match(/^\w+$/)) {
+        var lookupVal = symbols.lookup(param); // Substitute symbol by actual value, then proceed
+        if (lookupVal) {
+          param = lookupVal;
+        }
+      }
+      
+      var value;
+    
+      // Is it a hexadecimal operand?
+      var match_data = param.match(/^\$([0-9a-f]{3,4})$/i);
+      if (match_data) {
+        value = parseInt(match_data[1], 16);
+      } else {
+        // Is it a decimal operand?
+        match_data = param.match(/^([0-9]{1,5})$/i);
+        if (match_data) {
+          value = parseInt(match_data[1], 10);
+        }
+      }
+      
+      // Validate range
+      if (value >= 0 && value <= 0xffff) {
+        return value;
+      } else {
+        return -1;
+      }
+    }
 
-    // checkBranch() - Commom branch function for all branches (BCC, BCS, BEQ, BNE..)
+    // Common branch function for all branches (BCC, BCS, BEQ, BNE..)
     function checkBranch(param, opcode) {
       var addr;
       if (opcode === null) { return false; }
@@ -2004,24 +2094,21 @@ function SimulatorWidget(node) {
       return true;
     }
 
-    // checkImmediate() - Check if param is immediate and push value
-    function checkImmediate(param, opcode) {
+    // Check if param is immediate and push value
+    function checkImmediate(param, opcode, symbols) {
       var value, label, hilo, addr;
       if (opcode === null) { return false; }
-      if (param.match(/^#\$[0-9a-f]{1,2}$/i)) {
-        pushByte(opcode);
-        value = parseInt(param.replace(/^#\$/, ""), 16);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
+      
+      var match_data = param.match(/^#([\w\$]+)$/i);
+      if (match_data) {
+        var operand = tryParseByteOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushByte(operand);
+          return true;
+        }
       }
-      if (param.match(/^#[0-9]{1,3}$/i)) {
-        pushByte(opcode);
-        value = parseInt(param.replace(/^#/, ""), 10);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
-      }
+      
       // Label lo/hi
       if (param.match(/^#[<>]\w+$/)) {
         label = param.replace(/^#[<>](\w+)$/, "$1");
@@ -2044,52 +2131,62 @@ function SimulatorWidget(node) {
           return true;
         }
       }
+      
       return false;
     }
 
-    // checkIndirect() - Check if param is indirect and push value
-    function checkIndirect(param, opcode) {
+    // Check if param is indirect and push value
+    function checkIndirect(param, opcode, symbols) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(\$[0-9a-f]{4}\)$/i)) {
-        pushByte(opcode);
-        value = param.replace(/^\(\$([0-9a-f]{4}).*$/i, "$1");
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(parseInt(value, 16));
-        return true;
+      
+      var match_data = param.match(/^\(([\w\$]+)\)$/i);
+      if (match_data) {
+        var operand = tryParseWordOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushWord(operand);
+          return true;
+        }
       }
       return false;
     }
 
-    // checkIndirectX() - Check if param is indirect X and push value
-    function checkIndirectX(param, opcode) {
+    // Check if param is indirect X and push value
+    function checkIndirectX(param, opcode, symbols) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(\$[0-9a-f]{1,2},X\)$/i)) {
-        pushByte(opcode);
-        value = param.replace(/^\(\$([0-9a-f]{1,2}).*$/i, "$1");
-        if (value < 0 || value > 255) { return false; }
-        pushByte(parseInt(value, 16));
-        return true;
+      
+      var match_data = param.match(/^\(([\w\$]+),X\)$/i);
+      if (match_data) {
+        var operand = tryParseByteOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushByte(operand);
+          return true;
+        }
       }
       return false;
     }
 
-    // checkIndirectY() - Check if param is indirect Y and push value
-    function checkIndirectY(param, opcode) {
+    // Check if param is indirect Y and push value
+    function checkIndirectY(param, opcode, symbols) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(\$[0-9a-f]{1,2}\),Y$/i)) {
-        pushByte(opcode);
-        value = param.replace(/^\([\$]([0-9a-f]{1,2}).*$/i, "$1");
-        if (value < 0 || value > 255) { return false; }
-        pushByte(parseInt(value, 16));
-        return true;
+      
+      var match_data = param.match(/^\(([\w\$]+)\),Y$/i);
+      if (match_data) {
+        var operand = tryParseByteOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushByte(operand);
+          return true;
+        }
       }
       return false;
     }
 
-    // checkSingle() - Single-byte opcodes
+    // Check single-byte opcodes
     function checkSingle(param, opcode) {
       if (opcode === null) { return false; }
       // Accumulator instructions are counted as single-byte opcodes
@@ -2098,40 +2195,37 @@ function SimulatorWidget(node) {
       return true;
     }
 
-    // checkZeroPage() - Check if param is ZP and push value
-    function checkZeroPage(param, opcode) {
+    // Check if param is ZP and push value
+    function checkZeroPage(param, opcode, symbols) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{1,2}$/i)) {
+
+      var operand = tryParseByteOperand(param, symbols);
+      if (operand >= 0) {
         pushByte(opcode);
-        value = parseInt(param.replace(/^\$/, ""), 16);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
+        pushByte(operand);
         return true;
       }
-      if (param.match(/^[0-9]{1,3}$/i)) {
-        value = parseInt(param, 10);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(opcode);
-        pushByte(value);
-        return true;
-      }
+      
       return false;
     }
 
-    // checkAbsoluteX() - Check if param is ABSX and push value
-    function checkAbsoluteX(param, opcode) {
+    // Check if param is ABSX and push value
+    function checkAbsoluteX(param, opcode, symbols) {
       var number, value, addr;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{3,4},X$/i)) {
-        pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]*),X/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(value);
-        return true;
+      
+      var match_data = param.match(/^([\w\$]+),X$/i);
+      if (match_data) {
+        var operand = tryParseWordOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushWord(operand);
+          return true;
+        }
       }
 
+      // it could be a label too..
       if (param.match(/^\w+,X$/i)) {
         param = param.replace(/,X$/i, "");
         pushByte(opcode);
@@ -2141,7 +2235,7 @@ function SimulatorWidget(node) {
           pushWord(addr);
           return true;
         } else {
-          pushWord(0x1234);
+          pushWord(0xffff); // filler, only used while indexing labels
           return true;
         }
       }
@@ -2149,21 +2243,22 @@ function SimulatorWidget(node) {
       return false;
     }
 
-    // checkAbsoluteY() - Check if param is ABSY and push value
-    function checkAbsoluteY(param, opcode) {
+    // Check if param is ABSY and push value
+    function checkAbsoluteY(param, opcode, symbols) {
       var number, value, addr;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{3,4},Y$/i)) {
-        pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]*),Y/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(value);
-        return true;
+      
+      var match_data = param.match(/^([\w\$]+),Y$/i);
+      if (match_data) {
+        var operand = tryParseWordOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushWord(operand);
+          return true;
+        }
       }
 
       // it could be a label too..
-
       if (param.match(/^\w+,Y$/i)) {
         param = param.replace(/,Y$/i, "");
         pushByte(opcode);
@@ -2173,98 +2268,88 @@ function SimulatorWidget(node) {
           pushWord(addr);
           return true;
         } else {
-          pushWord(0x1234);
+          pushWord(0xffff); // filler, only used while indexing labels
           return true;
         }
       }
       return false;
     }
 
-    // checkZeroPageX() - Check if param is ZPX and push value
-    function checkZeroPageX(param, opcode) {
+    // Check if param is ZPX and push value
+    function checkZeroPageX(param, opcode, symbols) {
       var number, value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{1,2},X/i)) {
-        pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]{1,2}),X/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
+      
+      var match_data = param.match(/^([\w\$]+),X$/i);
+      if (match_data) {
+        var operand = tryParseByteOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushByte(operand);
+          return true;
+        }
       }
-      if (param.match(/^[0-9]{1,3},X/i)) {
-        pushByte(opcode);
-        number = param.replace(/^([0-9]{1,3}),X/i, "$1");
-        value = parseInt(number, 10);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
-      }
+      
       return false;
     }
 
-    function checkZeroPageY(param, opcode) {
+    // Check if param is ZPY and push value
+    function checkZeroPageY(param, opcode, symbols) {
       var number, value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{1,2},Y/i)) {
-        pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]{1,2}),Y/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
+      
+      var match_data = param.match(/^([\w\$]+),Y$/i);
+      if (match_data) {
+        var operand = tryParseByteOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushByte(operand);
+          return true;
+        }
       }
-      if (param.match(/^[0-9]{1,3},Y/i)) {
-        pushByte(opcode);
-        number = param.replace(/^([0-9]{1,3}),Y/i, "$1");
-        value = parseInt(number, 10);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
-      }
+      
       return false;
     }
 
-    // checkAbsolute() - Check if param is ABS and push value
-    function checkAbsolute(param, opcode) {
+    // Check if param is ABS and push value
+    function checkAbsolute(param, opcode, symbols) {
       var value, number, addr;
       if (opcode === null) { return false; }
-      pushByte(opcode);
-      if (param.match(/^\$[0-9a-f]{3,4}$/i)) {
-        value = parseInt(param.replace(/^\$/, ""), 16);
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(value);
-        return true;
+
+      var match_data = param.match(/^([\w\$]+)$/i);
+      if (match_data) {
+        var operand = tryParseWordOperand(match_data[1], symbols);
+        if (operand >= 0) {
+          pushByte(opcode);
+          pushWord(operand);
+          return true;
+        }
       }
-      if (param.match(/^[0-9]{1,5}$/i)) {  // Thanks, Matt!
-        value = parseInt(param, 10);
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(value);
-        return(true);
-      }
+
       // it could be a label too..
       if (param.match(/^\w+$/)) {
+        pushByte(opcode);
         if (labels.find(param)) {
           addr = (labels.getPC(param));
           if (addr < 0 || addr > 0xffff) { return false; }
           pushWord(addr);
           return true;
         } else {
-          pushWord(0x1234);
+          pushWord(0xffff); // filler, only used while indexing labels
           return true;
         }
       }
       return false;
     }
 
-    // pushByte() - Push byte to memory
+    // Push a byte to memory
     function pushByte(value) {
       memory.set(defaultCodePC, value & 0xff);
       defaultCodePC++;
       codeLen++;
     }
 
-    // pushWord() - Push a word using pushByte twice
+    // Push a word to memory in little-endian order
     function pushWord(value) {
       pushByte(value & 0xff);
       pushByte((value >> 8) & 0xff);
@@ -2285,7 +2370,7 @@ function SimulatorWidget(node) {
       w.document.close();
     }
 
-    // hexDump() - Dump binary as hex to new window
+    // Dump binary as hex to new window
     function hexdump() {
       openPopup(memory.format(0x600, codeLen), 'Hexdump');
     }
@@ -2477,11 +2562,10 @@ function SimulatorWidget(node) {
     return str.substring(hi, hi + 1) + str.substring(lo, lo + 1);
   }
 
-  // message() - Prints text in the message window
+  // Prints text in the message window
   function message(text) {
     $node.find('.messages code').append(text + '\n').scrollTop(10000);
   }
-
 
   initialize();
 }
