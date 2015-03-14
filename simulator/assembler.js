@@ -1757,6 +1757,7 @@ function SimulatorWidget(node) {
     var defaultCodePC;
     var codeLen;
     var codeAssembledOK = false;
+    var wasOutOfRangeBranch = false;
 
     var Opcodes = [
       /* Name, Imm,  ZP,   ZPX,  ZPY,  ABS, ABSX, ABSY,  IND, INDX, INDY, SNGL, BRA */
@@ -1822,6 +1823,8 @@ function SimulatorWidget(node) {
     // Assembles the code into memory
     function assembleCode() {
       var BOOTSTRAP_ADDRESS = 0x600;
+
+      wasOutOfRangeBranch = false;
   
       simulator.reset();
       labels.reset();
@@ -1863,8 +1866,18 @@ function SimulatorWidget(node) {
         ui.assembleSuccess();
         memory.set(defaultCodePC, 0x00); //set a null byte at the end of the code
       } else {
+
         var str = lines[i].replace("<", "&lt;").replace(">", "&gt;");
-        message("**Syntax error line " + (i + 1) + ": " + str + "**");
+
+        if(!wasOutOfRangeBranch) {
+
+          message("**Syntax error line " + (i + 1) + ": " + str + "**");
+
+        } else {
+
+          message('**Out of range branch on line ' + (i + 1) + ' (branches are limited to -128 to +127): ' + str + '**');
+        }
+
         ui.initialize();
         return false;
       }
@@ -2086,6 +2099,15 @@ function SimulatorWidget(node) {
       }
       if (addr === -1) { pushWord(0x00); return false; }
       pushByte(opcode);
+
+      var distance = addr - defaultCodePC;
+
+      if(distance < -128 || distance > 127) {
+
+        wasOutOfRangeBranch = true;
+        return false;
+      }
+
       if (addr < (defaultCodePC - 0x600)) {  // Backwards?
         pushByte((0xff - ((defaultCodePC - 0x600) - addr)) & 0xff);
         return true;
