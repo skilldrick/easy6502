@@ -51,8 +51,8 @@ function SimulatorWidget(node) {
     $node.find('.stepButton').click(simulator.debugExec);
     $node.find('.gotoButton').click(simulator.gotoAddr);
     $node.find('.notesButton').click(ui.showNotes);
-    $node.find('.code').keypress(simulator.stop);
-    $node.find('.code').keypress(ui.initialize);
+    $node.find('.code').on('keypress input', simulator.stop);
+    $node.find('.code').on('keypress input', ui.initialize);
     $(document).keypress(memory.storeKeypress);
   }
 
