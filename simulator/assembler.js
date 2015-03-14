@@ -197,28 +197,61 @@ function SimulatorWidget(node) {
     }
 
     function updatePixel(addr) {
-      ctx.fillStyle = palette[memory.get(addr) & 0x0f];
+      ctx.fillStyle = getPixelColor(addr);
       var y = Math.floor((addr - 0x200) / 32);
       var x = (addr - 0x200) % 32;
       ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
     }
 
+    function getPixelColor(addr) {
+
+      return palette[memory.get(addr) & 0x0f];
+    }
+
     return {
       initialize: initialize,
       reset: reset,
-      updatePixel: updatePixel
+      updatePixel: updatePixel,
+      getPixelColor: getPixelColor
     };
   }
 
   function Memory() {
-    var memArray = new Array(0x600);
+    var memArray = new Array(0x600),
+        lastAccessAddress = null,
+        lastAccessIsRead = false;
 
-    function set(addr, val) {
+    function set(addr, val, forProgram) {
+
+      // Flag set if memory is accessed by program
+      // used to indicate which memory locations instructions
+      // are setting in the monitor
+      if(typeof forProgram !== 'undefined' && forProgram) {
+
+        lastAccessAddress = addr;
+        lastAccessIsRead = false;
+      }
+
       return memArray[addr] = val;
     }
 
-    function get(addr) {
+    function get(addr, forProgram) {
+
+      // Flag set if memory is accessed by program
+      // used to indicate which memory locations instructions
+      // are getting in the monitor
+      if(typeof forProgram !== 'undefined' && forProgram) {
+
+        lastAccessAddress = addr;
+        lastAccessIsRead = true;
+      }
+
       return memArray[addr];
+    }
+
+    function clearLastAccess() {
+
+      lastAccessAddress = null;
     }
 
     function getWord(addr) {
@@ -226,8 +259,8 @@ function SimulatorWidget(node) {
     }
 
     // Poke a byte, don't touch any registers
-    function storeByte(addr, value) {
-      set(addr, value & 0xff);
+    function storeByte(addr, value, forProgram) {
+      set(addr, value & 0xff, forProgram);
       if ((addr >= 0x200) && (addr <= 0x5ff)) {
         display.updatePixel(addr);
       }
@@ -240,26 +273,97 @@ function SimulatorWidget(node) {
     }
 
     function format(start, length) {
-      var html = '';
-      var n;
+      var html = '',
+          inCode = false;
 
       for (var x = 0; x < length; x++) {
         if ((x & 15) === 0) {
           if (x > 0) { html += "\n"; }
-          n = (start + x);
-          html += num2hex(((n >> 8) & 0xff));
-          html += num2hex((n & 0xff));
-          html += ": ";
+          html += addr2hex(start + x) + ": ";
         }
-        html += num2hex(memory.get(start + x));
-        html += " ";
+
+        if(assembler.isCodeAddress(start + x) && !inCode) {
+
+          html += '<span class="monitor-code">';
+          inCode = true;
+        }
+
+        html += formatByte(start + x);
+
+        if((x % 16) === 15) {
+
+          if(inCode) {
+
+            html += '</span>';
+            inCode = false;
+          }
+
+        } else {
+
+          if(inCode && !assembler.isCodeAddress(start + x + 1)) {
+
+            html += '</span>';
+            inCode = false;
+          }
+
+          html += " ";
+        }
       }
+
       return html;
+    }
+
+    function formatByte(addr) {
+
+      var hex = num2hex(memory.get(addr)),
+          title = 'title="$' + addr2hex(addr) + '"';
+
+      if(0x0200 <= addr && addr <= 0x05ff) {
+        var rgba = toTransparentRGBA(display.getPixelColor(addr));
+
+        return '<span style="background:' + rgba + ';" ' + title + '>' + hex + '</span>'
+      }
+
+      var classes = '';
+
+      if(addr === lastAccessAddress) {
+
+        classes = lastAccessIsRead ? 'monitor-read ' : 'monitor-write ';
+      }
+
+      if(addr === 0x00fe) {
+
+        classes += 'monitor-random ';
+      }
+
+      if(addr === 0x00ff) {
+
+        classes += 'monitor-lastkey ';
+      }
+
+      if(addr === simulator.getCurrentPC()) {
+
+        classes += 'monitor-pc';
+      }
+
+      return '<span class="' + classes + '" ' + title + '>' + hex + '</span>';
+    }
+
+    function toTransparentRGBA(hex) {
+
+      var r = parseInt(hex.substr(1, 2), 16),
+          g = parseInt(hex.substr(3, 2), 16),
+          b = parseInt(hex.substr(5, 2), 16);
+
+      var opacity = (r != 0 && g != 0 && b != 0) ? '.85' : '.15';
+
+      return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + opacity + ')';
     }
 
     return {
       set: set,
       get: get,
+      clearLastAccess: clearLastAccess,
       getWord: getWord,
       storeByte: storeByte,
       storeKeypress: storeKeypress,
@@ -360,18 +464,18 @@ function SimulatorWidget(node) {
     }
 
     function DEC(addr) {
-      var value = memory.get(addr);
+      var value = memory.get(addr, true);
       value--;
       value &= 0xff;
-      memory.storeByte(addr, value);
+      memory.storeByte(addr, value, true);
       setNVflags(value);
     }
 
     function INC(addr) {
-      var value = memory.get(addr);
+      var value = memory.get(addr, true);
       value++;
       value &= 0xff;
-      memory.storeByte(addr, value);
+      memory.storeByte(addr, value, true);
       setNVflags(value);
     }
 
@@ -499,23 +603,23 @@ function SimulatorWidget(node) {
       i01: function () {
         var zp = (popByte() + regX) & 0xff;
         var addr = memory.getWord(zp);
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA |= value;
         ORA();
       },
 
       i05: function () {
         var zp = popByte();
-        regA |= memory.get(zp);
+        regA |= memory.get(zp, true);
         ORA();
       },
 
       i06: function () {
         var zp = popByte();
-        var value = memory.get(zp);
+        var value = memory.get(zp, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
-        memory.storeByte(zp, value);
+        memory.storeByte(zp, value, true);
         ASL(value);
       },
 
@@ -536,16 +640,16 @@ function SimulatorWidget(node) {
       },
 
       i0d: function () {
-        regA |= memory.get(popWord());
+        regA |= memory.get(popWord(), true);
         ORA();
       },
 
       i0e: function () {
         var addr = popWord();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ASL(value);
       },
 
@@ -558,22 +662,22 @@ function SimulatorWidget(node) {
       i11: function () {
         var zp = popByte();
         var value = memory.getWord(zp) + regY;
-        regA |= memory.get(value);
+        regA |= memory.get(value, true);
         ORA();
       },
 
       i15: function () {
         var addr = (popByte() + regX) & 0xff;
-        regA |= memory.get(addr);
+        regA |= memory.get(addr, true);
         ORA();
       },
 
       i16: function () {
         var addr = (popByte() + regX) & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ASL(value);
       },
 
@@ -583,22 +687,22 @@ function SimulatorWidget(node) {
 
       i19: function () {
         var addr = popWord() + regY;
-        regA |= memory.get(addr);
+        regA |= memory.get(addr, true);
         ORA();
       },
 
       i1d: function () {
         var addr = popWord() + regX;
-        regA |= memory.get(addr);
+        regA |= memory.get(addr, true);
         ORA();
       },
 
       i1e: function () {
         var addr = popWord() + regX;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ASL(value);
       },
 
@@ -614,7 +718,7 @@ function SimulatorWidget(node) {
       i21: function () {
         var zp = (popByte() + regX) & 0xff;
         var addr = memory.getWord(zp);
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA &= value;
         AND();
       },
@@ -634,11 +738,11 @@ function SimulatorWidget(node) {
       i26: function () {
         var sf = carrySet();
         var addr = popByte();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
         value |= sf;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROL(value);
       },
 
@@ -661,12 +765,12 @@ function SimulatorWidget(node) {
       },
 
       i2c: function () {
-        var value = memory.get(popWord());
+        var value = memory.get(popWord(), true);
         BIT(value);
       },
 
       i2d: function () {
-        var value = memory.get(popWord());
+        var value = memory.get(popWord(), true);
         regA &= value;
         AND();
       },
@@ -674,11 +778,11 @@ function SimulatorWidget(node) {
       i2e: function () {
         var sf = carrySet();
         var addr = popWord();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
         value |= sf;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROL(value);
       },
 
@@ -691,24 +795,24 @@ function SimulatorWidget(node) {
       i31: function () {
         var zp = popByte();
         var value = memory.getWord(zp) + regY;
-        regA &= memory.get(value);
+        regA &= memory.get(value, true);
         AND();
       },
 
       i35: function () {
         var addr = (popByte() + regX) & 0xff;
-        regA &= memory.get(addr);
+        regA &= memory.get(addr, true);
         AND();
       },
 
       i36: function () {
         var sf = carrySet();
         var addr = (popByte() + regX) & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
         value |= sf;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROL(value);
       },
 
@@ -718,14 +822,14 @@ function SimulatorWidget(node) {
 
       i39: function () {
         var addr = popWord() + regY;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA &= value;
         AND();
       },
 
       i3d: function () {
         var addr = popWord() + regX;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA &= value;
         AND();
       },
@@ -733,11 +837,11 @@ function SimulatorWidget(node) {
       i3e: function () {
         var sf = carrySet();
         var addr = popWord() + regX;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit7(value);
         value = value << 1;
         value |= sf;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROL(value);
       },
 
@@ -750,23 +854,23 @@ function SimulatorWidget(node) {
       i41: function () {
         var zp = (popByte() + regX) & 0xff;
         var value = memory.getWord(zp);
-        regA ^= memory.get(value);
+        regA ^= memory.get(value, true);
         EOR();
       },
 
       i45: function () {
         var addr = popByte() & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA ^= value;
         EOR();
       },
 
       i46: function () {
         var addr = popByte() & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         LSR(value);
       },
 
@@ -793,17 +897,17 @@ function SimulatorWidget(node) {
 
       i4d: function () {
         var addr = popWord();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA ^= value;
         EOR();
       },
 
       i4e: function () {
         var addr = popWord();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         LSR(value);
       },
 
@@ -816,22 +920,22 @@ function SimulatorWidget(node) {
       i51: function () {
         var zp = popByte();
         var value = memory.getWord(zp) + regY;
-        regA ^= memory.get(value);
+        regA ^= memory.get(value, true);
         EOR();
       },
 
       i55: function () {
         var addr = (popByte() + regX) & 0xff;
-        regA ^= memory.get(addr);
+        regA ^= memory.get(addr, true);
         EOR();
       },
 
       i56: function () {
         var addr = (popByte() + regX) & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         LSR(value);
       },
 
@@ -843,24 +947,24 @@ function SimulatorWidget(node) {
 
       i59: function () {
         var addr = popWord() + regY;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA ^= value;
         EOR();
       },
 
       i5d: function () {
         var addr = popWord() + regX;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         regA ^= value;
         EOR();
       },
 
       i5e: function () {
         var addr = popWord() + regX;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         LSR(value);
       },
 
@@ -872,14 +976,14 @@ function SimulatorWidget(node) {
       i61: function () {
         var zp = (popByte() + regX) & 0xff;
         var addr = memory.getWord(zp);
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testADC(value);
         //ADC
       },
 
       i65: function () {
         var addr = popByte();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testADC(value);
         //ADC
       },
@@ -887,11 +991,11 @@ function SimulatorWidget(node) {
       i66: function () {
         var sf = carrySet();
         var addr = popByte();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
         if (sf) { value |= 0x80; }
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROR(value);
       },
 
@@ -922,7 +1026,7 @@ function SimulatorWidget(node) {
 
       i6d: function () {
         var addr = popWord();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testADC(value);
         //ADC
       },
@@ -930,11 +1034,11 @@ function SimulatorWidget(node) {
       i6e: function () {
         var sf = carrySet();
         var addr = popWord();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
         if (sf) { value |= 0x80; }
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROR(value);
       },
 
@@ -947,14 +1051,14 @@ function SimulatorWidget(node) {
       i71: function () {
         var zp = popByte();
         var addr = memory.getWord(zp);
-        var value = memory.get(addr + regY);
+        var value = memory.get(addr + regY, true);
         testADC(value);
         //ADC
       },
 
       i75: function () {
         var addr = (popByte() + regX) & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testADC(value);
         //ADC
       },
@@ -962,11 +1066,11 @@ function SimulatorWidget(node) {
       i76: function () {
         var sf = carrySet();
         var addr = (popByte() + regX) & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
         if (sf) { value |= 0x80; }
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROR(value);
       },
 
@@ -978,14 +1082,14 @@ function SimulatorWidget(node) {
 
       i79: function () {
         var addr = popWord();
-        var value = memory.get(addr + regY);
+        var value = memory.get(addr + regY, true);
         testADC(value);
         //ADC
       },
 
       i7d: function () {
         var addr = popWord();
-        var value = memory.get(addr + regX);
+        var value = memory.get(addr + regX, true);
         testADC(value);
         //ADC
       },
@@ -993,33 +1097,33 @@ function SimulatorWidget(node) {
       i7e: function () {
         var sf = carrySet();
         var addr = popWord() + regX;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         setCarryFlagFromBit0(value);
         value = value >> 1;
         if (sf) { value |= 0x80; }
-        memory.storeByte(addr, value);
+        memory.storeByte(addr, value, true);
         ROR(value);
       },
 
       i81: function () {
         var zp = (popByte() + regX) & 0xff;
         var addr = memory.getWord(zp);
-        memory.storeByte(addr, regA);
+        memory.storeByte(addr, regA, true);
         //STA
       },
 
       i84: function () {
-        memory.storeByte(popByte(), regY);
+        memory.storeByte(popByte(), regY, true);
         //STY
       },
 
       i85: function () {
-        memory.storeByte(popByte(), regA);
+        memory.storeByte(popByte(), regA, true);
         //STA
       },
 
       i86: function () {
-        memory.storeByte(popByte(), regX);
+        memory.storeByte(popByte(), regX, true);
         //STX
       },
 
@@ -1036,17 +1140,17 @@ function SimulatorWidget(node) {
       },
 
       i8c: function () {
-        memory.storeByte(popWord(), regY);
+        memory.storeByte(popWord(), regY, true);
         //STY
       },
 
       i8d: function () {
-        memory.storeByte(popWord(), regA);
+        memory.storeByte(popWord(), regA, true);
         //STA
       },
 
       i8e: function () {
-        memory.storeByte(popWord(), regX);
+        memory.storeByte(popWord(), regX, true);
         //STX
       },
 
@@ -1059,22 +1163,22 @@ function SimulatorWidget(node) {
       i91: function () {
         var zp = popByte();
         var addr = memory.getWord(zp) + regY;
-        memory.storeByte(addr, regA);
+        memory.storeByte(addr, regA, true);
         //STA
       },
 
       i94: function () {
-        memory.storeByte((popByte() + regX) & 0xff, regY);
+        memory.storeByte((popByte() + regX) & 0xff, regY, true);
         //STY
       },
 
       i95: function () {
-        memory.storeByte((popByte() + regX) & 0xff, regA);
+        memory.storeByte((popByte() + regX) & 0xff, regA, true);
         //STA
       },
 
       i96: function () {
-        memory.storeByte((popByte() + regY) & 0xff, regX);
+        memory.storeByte((popByte() + regY) & 0xff, regX, true);
         //STX
       },
 
@@ -1085,7 +1189,7 @@ function SimulatorWidget(node) {
       },
 
       i99: function () {
-        memory.storeByte(popWord() + regY, regA);
+        memory.storeByte(popWord() + regY, regA, true);
         //STA
       },
 
@@ -1096,7 +1200,7 @@ function SimulatorWidget(node) {
 
       i9d: function () {
         var addr = popWord();
-        memory.storeByte(addr + regX, regA);
+        memory.storeByte(addr + regX, regA, true);
         //STA
       },
 
@@ -1108,7 +1212,7 @@ function SimulatorWidget(node) {
       ia1: function () {
         var zp = (popByte() + regX) & 0xff;
         var addr = memory.getWord(zp);
-        regA = memory.get(addr);
+        regA = memory.get(addr, true);
         LDA();
       },
 
@@ -1118,17 +1222,17 @@ function SimulatorWidget(node) {
       },
 
       ia4: function () {
-        regY = memory.get(popByte());
+        regY = memory.get(popByte(), true);
         LDY();
       },
 
       ia5: function () {
-        regA = memory.get(popByte());
+        regA = memory.get(popByte(), true);
         LDA();
       },
 
       ia6: function () {
-        regX = memory.get(popByte());
+        regX = memory.get(popByte(), true);
         LDX();
       },
 
@@ -1150,17 +1254,17 @@ function SimulatorWidget(node) {
       },
 
       iac: function () {
-        regY = memory.get(popWord());
+        regY = memory.get(popWord(), true);
         LDY();
       },
 
       iad: function () {
-        regA = memory.get(popWord());
+        regA = memory.get(popWord(), true);
         LDA();
       },
 
       iae: function () {
-        regX = memory.get(popWord());
+        regX = memory.get(popWord(), true);
         LDX();
       },
 
@@ -1173,22 +1277,22 @@ function SimulatorWidget(node) {
       ib1: function () {
         var zp = popByte();
         var addr = memory.getWord(zp) + regY;
-        regA = memory.get(addr);
+        regA = memory.get(addr, true);
         LDA();
       },
 
       ib4: function () {
-        regY = memory.get((popByte() + regX) & 0xff);
+        regY = memory.get((popByte() + regX) & 0xff, true);
         LDY();
       },
 
       ib5: function () {
-        regA = memory.get((popByte() + regX) & 0xff);
+        regA = memory.get((popByte() + regX) & 0xff, true);
         LDA();
       },
 
       ib6: function () {
-        regX = memory.get((popByte() + regY) & 0xff);
+        regX = memory.get((popByte() + regY) & 0xff, true);
         LDX();
       },
 
@@ -1198,7 +1302,7 @@ function SimulatorWidget(node) {
 
       ib9: function () {
         var addr = popWord() + regY;
-        regA = memory.get(addr);
+        regA = memory.get(addr, true);
         LDA();
       },
 
@@ -1210,19 +1314,19 @@ function SimulatorWidget(node) {
 
       ibc: function () {
         var addr = popWord() + regX;
-        regY = memory.get(addr);
+        regY = memory.get(addr, true);
         LDY();
       },
 
       ibd: function () {
         var addr = popWord() + regX;
-        regA = memory.get(addr);
+        regA = memory.get(addr, true);
         LDA();
       },
 
       ibe: function () {
         var addr = popWord() + regY;
-        regX = memory.get(addr);
+        regX = memory.get(addr, true);
         LDX();
       },
 
@@ -1235,19 +1339,19 @@ function SimulatorWidget(node) {
       ic1: function () {
         var zp = (popByte() + regX) & 0xff;
         var addr = memory.getWord(zp);
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         doCompare(regA, value);
         //CPA
       },
 
       ic4: function () {
-        var value = memory.get(popByte());
+        var value = memory.get(popByte(), true);
         doCompare(regY, value);
         //CPY
       },
 
       ic5: function () {
-        var value = memory.get(popByte());
+        var value = memory.get(popByte(), true);
         doCompare(regA, value);
         //CPA
       },
@@ -1276,13 +1380,13 @@ function SimulatorWidget(node) {
       },
 
       icc: function () {
-        var value = memory.get(popWord());
+        var value = memory.get(popWord(), true);
         doCompare(regY, value);
         //CPY
       },
 
       icd: function () {
-        var value = memory.get(popWord());
+        var value = memory.get(popWord(), true);
         doCompare(regA, value);
         //CPA
       },
@@ -1301,13 +1405,13 @@ function SimulatorWidget(node) {
       id1: function () {
         var zp = popByte();
         var addr = memory.getWord(zp) + regY;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         doCompare(regA, value);
         //CMP
       },
 
       id5: function () {
-        var value = memory.get((popByte() + regX) & 0xff);
+        var value = memory.get((popByte() + regX) & 0xff, true);
         doCompare(regA, value);
         //CMP
       },
@@ -1324,14 +1428,14 @@ function SimulatorWidget(node) {
 
       id9: function () {
         var addr = popWord() + regY;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         doCompare(regA, value);
         //CMP
       },
 
       idd: function () {
         var addr = popWord() + regX;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         doCompare(regA, value);
         //CMP
       },
@@ -1350,20 +1454,20 @@ function SimulatorWidget(node) {
       ie1: function () {
         var zp = (popByte() + regX) & 0xff;
         var addr = memory.getWord(zp);
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testSBC(value);
         //SBC
       },
 
       ie4: function () {
-        var value = memory.get(popByte());
+        var value = memory.get(popByte(), true);
         doCompare(regX, value);
         //CPX
       },
 
       ie5: function () {
         var addr = popByte();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testSBC(value);
         //SBC
       },
@@ -1390,14 +1494,14 @@ function SimulatorWidget(node) {
       },
 
       iec: function () {
-        var value = memory.get(popWord());
+        var value = memory.get(popWord(), true);
         doCompare(regX, value);
         //CPX
       },
 
       ied: function () {
         var addr = popWord();
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testSBC(value);
         //SBC
       },
@@ -1416,14 +1520,14 @@ function SimulatorWidget(node) {
       if1: function () {
         var zp = popByte();
         var addr = memory.getWord(zp);
-        var value = memory.get(addr + regY);
+        var value = memory.get(addr + regY, true);
         testSBC(value);
         //SBC
       },
 
       if5: function () {
         var addr = (popByte() + regX) & 0xff;
-        var value = memory.get(addr);
+        var value = memory.get(addr, true);
         testSBC(value);
         //SBC
       },
@@ -1440,14 +1544,14 @@ function SimulatorWidget(node) {
 
       if9: function () {
         var addr = popWord();
-        var value = memory.get(addr + regY);
+        var value = memory.get(addr + regY, true);
         testSBC(value);
         //SBC
       },
 
       ifd: function () {
         var addr = popWord();
-        var value = memory.get(addr + regX);
+        var value = memory.get(addr + regX, true);
         testSBC(value);
         //SBC
       },
@@ -1537,6 +1641,7 @@ function SimulatorWidget(node) {
       if (!codeRunning && !debugging) { return; }
 
       setRandomByte();
+      memory.clearLastAccess();
       executeNextInstruction();
 
       if ((regPC === 0) || (!codeRunning && !debugging)) {
@@ -1615,9 +1720,15 @@ function SimulatorWidget(node) {
       }
     }
 
+    function getCurrentPC() {
+
+      return regPC;
+    }
+
     // reset() - Reset CPU and memory.
     function reset() {
       display.reset();
+      memory.clearLastAccess();
       for (var i = 0; i < 0x600; i++) { // clear ZP, stack and screen
         memory.set(i, 0x00);
       }
@@ -1645,7 +1756,8 @@ function SimulatorWidget(node) {
       gotoAddr: gotoAddr,
       reset: reset,
       stop: stop,
-      toggleMonitor: toggleMonitor
+      toggleMonitor: toggleMonitor,
+      getCurrentPC: getCurrentPC
     };
   }
 
@@ -1818,10 +1930,25 @@ function SimulatorWidget(node) {
       ["STY", null, 0x84, 0x94, null, 0x8c, null, null, null, null, null, null, null],
       ["---", null, null, null, null, null, null, null, null, null, null, null, null]
     ];
+
+    function getCodeStartAddress() {
+
+      return 0x600;
+    }
+
+    function getCodeEndAddress() {
+
+      return getCodeStartAddress() + codeLen;
+    }
+
+    function isCodeAddress(addr) {
+
+      return getCodeStartAddress() <= addr && addr<= getCodeEndAddress();
+    }
     
     // Assembles the code into memory
     function assembleCode() {
-      var BOOTSTRAP_ADDRESS = 0x600;
+      var BOOTSTRAP_ADDRESS = getCodeStartAddress();
   
       simulator.reset();
       labels.reset();
@@ -2546,7 +2673,10 @@ function SimulatorWidget(node) {
         return defaultCodePC;
       },
       hexdump: hexdump,
-      disassemble: disassemble
+      disassemble: disassemble,
+      getCodeStartAddress: getCodeStartAddress,
+      getCodeEndAddress: getCodeEndAddress,
+      isCodeAddress: isCodeAddress,
     };
   }
 

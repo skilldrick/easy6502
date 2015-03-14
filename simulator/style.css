@@ -76,6 +76,34 @@
   display: none;
 }
 
+.monitor-code {
+  background: rgba(255, 235, 0, .4);
+}
+
+.monitor-read, .monitor-write {
+  font-weight: bold;
+}
+
+.monitor-read {
+  color: #000;
+}
+
+.monitor-write {
+  color: #080;
+}
+
+.monitor-random {
+  color: #FA33FA;
+}
+
+.monitor-lastkey {
+  color: #8C008C;
+}
+
+.monitor-pc {
+  color: #C86400;
+}
+
 .messages {
   margin: 0;
   padding: 6px;
