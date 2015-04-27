@@ -1563,7 +1563,7 @@ function SimulatorWidget(node) {
         if (!isNaN(start) && !isNaN(length) && start >= 0 && length > 0 && (start + length) <= 65536) {
           monitorNode.html(memory.format(start, length));
         } else {
-          monitorNode.html('Cannot montior this range. Valid ranges are between $0000 and $ffff, inclusive.');
+          monitorNode.html('Cannot monitor this range. Valid ranges are between $0000 and $ffff, inclusive.');
         }
       }
     }
