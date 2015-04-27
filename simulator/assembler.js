@@ -1558,9 +1558,11 @@ function SimulatorWidget(node) {
         var start = parseInt($node.find('.start').val(), 16);
         var length = parseInt($node.find('.length').val(), 16);
 
+        var end = start + length - 1;
+
         var monitorNode = $node.find('.monitor code');
 
-        if (!isNaN(start) && !isNaN(length) && start >= 0 && length > 0 && (start + length) <= 0x10000) {
+        if (!isNaN(start) && !isNaN(length) && start >= 0 && length > 0 && end <= 0xffff) {
           monitorNode.html(memory.format(start, length));
         } else {
           monitorNode.html('Cannot monitor this range. Valid ranges are between $0000 and $ffff, inclusive.');
@@ -1573,7 +1575,8 @@ function SimulatorWidget(node) {
       var $start  = $node.find('.start'),
           $length = $node.find('.length'),
           start   = parseInt($start.val(), 16),
-          length  = parseInt($length.val(), 16);
+          length  = parseInt($length.val(), 16),
+          end     = start + length - 1;
 
       $start.removeClass('monitor-invalid');
       $length.removeClass('monitor-invalid');
@@ -1582,7 +1585,7 @@ function SimulatorWidget(node) {
 
         $start.addClass('monitor-invalid');
 
-      } else if(isNaN(length) || (start + length) > 0x10000) {
+      } else if(isNaN(length) || end > 0xffff) {
 
         $length.addClass('monitor-invalid');
       }
