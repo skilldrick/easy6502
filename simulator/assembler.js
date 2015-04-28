@@ -48,12 +48,15 @@ function SimulatorWidget(node) {
       ui.toggleMonitor();
       simulator.toggleMonitor();
     });
+    $node.find('.start, .length').blur(simulator.handleMonitorRangeChange);
     $node.find('.stepButton').click(simulator.debugExec);
     $node.find('.gotoButton').click(simulator.gotoAddr);
     $node.find('.notesButton').click(ui.showNotes);
     $node.find('.code').on('keypress input', simulator.stop);
     $node.find('.code').on('keypress input', ui.initialize);
     $(document).keypress(memory.storeKeypress);
+
+    simulator.handleMonitorRangeChange();
   }
 
   function stripText() {
@@ -1554,9 +1557,37 @@ function SimulatorWidget(node) {
       if (monitoring) {
         var start = parseInt($node.find('.start').val(), 16);
         var length = parseInt($node.find('.length').val(), 16);
-        if (start >= 0 && length > 0) {
-          $node.find('.monitor code').html(memory.format(start, length));
+
+        var end = start + length - 1;
+
+        var monitorNode = $node.find('.monitor code');
+
+        if (!isNaN(start) && !isNaN(length) && start >= 0 && length > 0 && end <= 0xffff) {
+          monitorNode.html(memory.format(start, length));
+        } else {
+          monitorNode.html('Cannot monitor this range. Valid ranges are between $0000 and $ffff, inclusive.');
         }
+      }
+    }
+
+    function handleMonitorRangeChange() {
+
+      var $start  = $node.find('.start'),
+          $length = $node.find('.length'),
+          start   = parseInt($start.val(), 16),
+          length  = parseInt($length.val(), 16),
+          end     = start + length - 1;
+
+      $start.removeClass('monitor-invalid');
+      $length.removeClass('monitor-invalid');
+
+      if(isNaN(start) || start < 0 || start > 0xffff) {
+
+        $start.addClass('monitor-invalid');
+
+      } else if(isNaN(length) || end > 0xffff) {
+
+        $length.addClass('monitor-invalid');
       }
     }
 
@@ -1645,7 +1676,8 @@ function SimulatorWidget(node) {
       gotoAddr: gotoAddr,
       reset: reset,
       stop: stop,
-      toggleMonitor: toggleMonitor
+      toggleMonitor: toggleMonitor,
+      handleMonitorRangeChange: handleMonitorRangeChange
     };
   }
 

@@ -76,6 +76,11 @@
   display: none;
 }
 
+.monitor-invalid {
+  border: 1px inset #c00;
+  padding: 2px 1px;
+}
+
 .messages {
   margin: 0;
   padding: 6px;
