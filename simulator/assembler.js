@@ -52,8 +52,13 @@ function SimulatorWidget(node) {
     $node.find('.stepButton').click(simulator.debugExec);
     $node.find('.gotoButton').click(simulator.gotoAddr);
     $node.find('.notesButton').click(ui.showNotes);
-    $node.find('.code').on('keypress input', simulator.stop);
-    $node.find('.code').on('keypress input', ui.initialize);
+
+    var editor = $node.find('.code');
+
+    editor.on('keypress input', simulator.stop);
+    editor.on('keypress input', ui.initialize);
+    editor.keydown(ui.captureTabInEditor);
+
     $(document).keypress(memory.storeKeypress);
 
     simulator.handleMonitorRangeChange();
@@ -157,6 +162,25 @@ function SimulatorWidget(node) {
       $node.find('.messages code').html($node.find('.notes').html());
     }
 
+    function captureTabInEditor(e) {
+      // Tab Key
+      if(e.keyCode === 9) {
+
+        // Prevent focus loss
+        e.preventDefault();
+
+        // Insert tab at caret position (instead of losing focus)
+        var caretStart = this.selectionStart,
+            caretEnd   = this.selectionEnd,
+            currentValue = this.value;
+
+        this.value = currentValue.substring(0, caretStart) + "\t" + currentValue.substring(caretEnd);
+
+        // Move cursor forwards one (after tab)
+        this.selectionStart = this.selectionEnd = caretStart + 1;
+      }
+    }
+
     return {
       initialize: initialize,
       play: play,
@@ -165,7 +189,8 @@ function SimulatorWidget(node) {
       debugOn: debugOn,
       debugOff: debugOff,
       toggleMonitor: toggleMonitor,
-      showNotes: showNotes
+      showNotes: showNotes,
+      captureTabInEditor: captureTabInEditor
     };
   }
 
