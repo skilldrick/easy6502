@@ -1902,11 +1902,8 @@ function SimulatorWidget(node) {
         var str = lines[i].replace("<", "&lt;").replace(">", "&gt;");
 
         if(!wasOutOfRangeBranch) {
-
           message("**Syntax error line " + (i + 1) + ": " + str + "**");
-
         } else {
-
           message('**Out of range branch on line ' + (i + 1) + ' (branches are limited to -128 to +127): ' + str + '**');
         }
 
@@ -2132,19 +2129,14 @@ function SimulatorWidget(node) {
       if (addr === -1) { pushWord(0x00); return false; }
       pushByte(opcode);
 
-      var distance = addr - defaultCodePC;
+      var distance = addr - defaultCodePC - 1;
 
       if(distance < -128 || distance > 127) {
-
-        wasOutOfRangeBranch = true;
-        return false;
+          wasOutOfRangeBranch = true;
+          return false;
       }
 
-      if (addr < (defaultCodePC - 0x600)) {  // Backwards?
-        pushByte((0xff - ((defaultCodePC - 0x600) - addr)) & 0xff);
-        return true;
-      }
-      pushByte((addr - (defaultCodePC - 0x600) - 1) & 0xff);
+      pushByte(distance);
       return true;
     }
 
