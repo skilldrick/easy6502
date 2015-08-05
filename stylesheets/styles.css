@@ -3,8 +3,6 @@
 body {
   padding:50px;
   font:14px/1.5 Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  color:#111;
-  font-weight:300;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -33,7 +31,7 @@ h3, h4, h5, h6 {
 }
 
 a, a code {
-  color:#39c;
+  color:#33f;
   font-weight:400;
   text-decoration:none;
 }
