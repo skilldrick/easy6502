@@ -793,13 +793,14 @@ stores this value into `($00),y`. `$00` is where the location of the apple is
 stored, so `($00),y` dereferences to this memory location. Read the "Indirect
 indexed" section in [Addressing modes](#addressing) for more details.
 
-Next comes `drawSnake`. This is pretty simple too. `X` is set to zero and `A`
-to one. We then store `A` at `($10,x)`. `$10` stores the two-byte location of
-the head, so this draws a white pixel at the current head position. Next we
-load `$03` into `X`. `$03` holds the length of the snake, so `($10,x)` in this
-case will be the location of the tail. Because `A` is zero now, this draws a
-black pixel over the tail. As only the head and the tail of the snake move,
-this is enough to keep the snake moving.
+Next comes `drawSnake`. This is pretty simple too - we first undraw the tail
+and then draw the head. `X` is set to the length of the snake, so we can index
+to the right pixel, and we set `A` to zero then perform the write using the
+indexed indirect addressing mode. Then we reload `X` to index to the head, set
+`A` to one and store it at `($10,x)`. `$10` stores the two-byte location of
+the head, so this draws a white pixel at the current head position. As only
+the head and the tail of the snake move, this is enough to keep the snake
+moving.
 
 The last subroutine, `spinWheels`, is just there because the game would run too
 fast otherwise. All `spinWheels` does is count `X` down from zero until it hits
