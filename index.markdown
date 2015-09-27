@@ -118,7 +118,7 @@ location `$0600`, so `PC` always starts there.
 The last section shows the processor flags. Each flag is one bit, so all seven
 flags live in a single byte. The flags are set by the processor to give
 information about the previous instruction. More on that later. [Read more
-about the registers and flags here](http://www.obelisk.demon.co.uk/6502/registers.html).
+about the registers and flags here](http://www.obelisk.me.uk/6502/registers.html).
 
 
 <h2 id='instructions'>Instructions</h2>
@@ -169,7 +169,7 @@ is set by all instructions where the result is zero.
 
 A full list of the 6502 instruction set is [available
 here](http://www.6502.org/tutorials/6502opcodes.html) and
-[here](http://www.obelisk.demon.co.uk/6502/reference.html) (I usually refer to
+[here](http://www.obelisk.me.uk/6502/reference.html) (I usually refer to
 both pages as they have their strengths and weaknesses). These pages detail the
 arguments to each instruction, which registers they use, and which flags they
 set. They are your bible.
@@ -208,7 +208,7 @@ First we load the value `$08` into the `X` register. The next line is a label.
 Labels just mark certain points in a program so we can return to them later.
 After the label we decrement `X`, store it to `$0200` (the top-left pixel), and
 then compare it to the value `$03`.
-[`CPX`](http://www.obelisk.demon.co.uk/6502/reference.html#CPX) compares the
+[`CPX`](http://www.obelisk.me.uk/6502/reference.html#CPX) compares the
 value in the `X` register with another value. If the two values are equal, the
 `Z` flag is set to `1`, otherwise it is set to `0`.
 
