@@ -1417,6 +1417,13 @@ function SimulatorWidget(node) {
         //NOP
       },
 
+      i42: function () {
+        //WDM  -- pseudo op for emulator: arg 0 to output A to message box
+        var value = popByte();
+        if (value == 0)
+          message(String.fromCharCode(regA));
+      },
+
       iec: function () {
         var value = memory.get(popWord());
         doCompare(regX, value);
@@ -1687,6 +1694,7 @@ function SimulatorWidget(node) {
     function stop() {
       codeRunning = false;
       clearInterval(executeId);
+      message("\nStopped\n");
     }
 
     function toggleMonitor() {
@@ -1874,6 +1882,7 @@ function SimulatorWidget(node) {
       ["PLP", null, null, null, null, null, null, null, null, null, null, 0x28, null],
       ["STX", null, 0x86, null, 0x96, 0x8e, null, null, null, null, null, null, null],
       ["STY", null, 0x84, 0x94, null, 0x8c, null, null, null, null, null, null, null],
+      ["WDM", 0x42, 0x42, null, null, null, null, null, null, null, null, null, null],
       ["---", null, null, null, null, null, null, null, null, null, null, null, null]
     ];
     
@@ -2635,7 +2644,9 @@ function SimulatorWidget(node) {
 
   // Prints text in the message window
   function message(text) {
-    $node.find('.messages code').append(text + '\n').scrollTop(10000);
+    if (text.length>1)
+      text += '\n'; // allow putc operations from the simulator (WDM opcode)
+    $node.find('.messages code').append(text).scrollTop(10000);
   }
 
   initialize();
