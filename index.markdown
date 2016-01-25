@@ -22,7 +22,8 @@ so's Latin. And they still teach that.
 [Q.E.D.](http://en.wikipedia.org/wiki/Q.E.D.)
 
 (Actually, I've been reliably informed that 6502 processors are still being
-produced by [Western Design Center](http://www.65xx.com/wdc/), so clearly 6502
+produced by [Western Design Center](http://www.westerndesigncenter.com/wdc/w65c02s-chip.cfm)
+and [sold to hobbyists](http://www.mouser.co.uk/Search/Refine.aspx?Keyword=65C02), so clearly 6502
 *isn't* a dead language! Who knew?)
 
 Seriously though, I think it's valuable to have an understanding of assembly
