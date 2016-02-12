@@ -633,12 +633,12 @@ stored into `$00`. Next, a different random byte is loaded into the
 accumulator, which is then `AND`-ed with the value `$03`. This part requires a
 bit of a detour.
 
-The hex value `$03` is represented in binary as `00000111`. The `AND` opcode
+The hex value `$03` is represented in binary as `00000011`. The `AND` opcode
 performs a bitwise AND of the argument with the accumulator. For example, if
-the accumulator contains the binary value `01010101`, then the result of `AND`
-with `00000111` will be `00000101`.
+the accumulator contains the binary value `10101010`, then the result of `AND`
+with `00000011` will be `00000010`.
 
-The effect of this is to mask out the least significant three bytes of the
+The effect of this is to mask out the least significant two bits of the
 accumulator, setting the others to zero. This converts a number in the range of
 0&ndash;255 to a number in the range of 0&ndash;3.
 
