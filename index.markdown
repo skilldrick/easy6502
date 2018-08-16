@@ -360,18 +360,18 @@ it, then use that to look up a two-byte address. For example:
 LDX #$01
 LDA #$05
 STA $01
-LDA #$06
+LDA #$07
 STA $02
 LDY #$0a
-STY $0605
+STY $0705
 LDA ($00,X)
 {% include end.html %}
 
-Memory locations `$01` and `$02` contain the values `$05` and `$06`
+Memory locations `$01` and `$02` contain the values `$05` and `$07`
 respectively. Think of `($00,X)` as `($00 + X)`. In this case `X` is `$01`, so
 this simplifies to `($01)`. From here things proceed like standard indirect
-addressing - the two bytes at `$01` and `$02` (`$05` and `$06`) are looked up
-to form the address `$0605`.  This is the address that the `Y` register was
+addressing - the two bytes at `$01` and `$02` (`$05` and `$07`) are looked up
+to form the address `$0705`.  This is the address that the `Y` register was
 stored into in the previous instruction, so the `A` register gets the same
 value as `Y`, albeit through a much more circuitous route. You won't see this
 much.
