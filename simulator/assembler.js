@@ -542,7 +542,7 @@ function SimulatorWidget(node) {
         var zp = popByte();
         var value = memory.get(zp);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         memory.storeByte(zp, value);
         ASL(value);
       },
@@ -572,7 +572,7 @@ function SimulatorWidget(node) {
         var addr = popWord();
         var value = memory.get(addr);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         memory.storeByte(addr, value);
         ASL(value);
       },
@@ -600,7 +600,7 @@ function SimulatorWidget(node) {
         var addr = (popByte() + regX) & 0xff;
         var value = memory.get(addr);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         memory.storeByte(addr, value);
         ASL(value);
       },
@@ -625,7 +625,7 @@ function SimulatorWidget(node) {
         var addr = popWord() + regX;
         var value = memory.get(addr);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         memory.storeByte(addr, value);
         ASL(value);
       },
@@ -664,7 +664,7 @@ function SimulatorWidget(node) {
         var addr = popByte();
         var value = memory.get(addr);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         value |= sf;
         memory.storeByte(addr, value);
         ROL(value);
@@ -704,7 +704,7 @@ function SimulatorWidget(node) {
         var addr = popWord();
         var value = memory.get(addr);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         value |= sf;
         memory.storeByte(addr, value);
         ROL(value);
@@ -734,7 +734,7 @@ function SimulatorWidget(node) {
         var addr = (popByte() + regX) & 0xff;
         var value = memory.get(addr);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         value |= sf;
         memory.storeByte(addr, value);
         ROL(value);
@@ -763,7 +763,7 @@ function SimulatorWidget(node) {
         var addr = popWord() + regX;
         var value = memory.get(addr);
         setCarryFlagFromBit7(value);
-        value = value << 1;
+        value = (value << 1) & 0xff;
         value |= sf;
         memory.storeByte(addr, value);
         ROL(value);
