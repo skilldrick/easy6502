@@ -583,8 +583,8 @@ and `$10` upwards is a pair of bytes representing a two-byte memory location
 that will be looked up using indirect addressing.  These memory locations will
 all be between `$0200` and `$05ff` - the section of memory corresponding to the
 simulator display. For example, if `$00` and `$01` contained the values `$01`
-and `$02`, they would be referring to the second pixel of the display (`$0201`
-- remember, the least significant byte comes first in indirect addressing).
+and `$02`, they would be referring to the second pixel of the display (
+`$0201` - remember, the least significant byte comes first in indirect addressing).
 
 The first two bytes hold the location of the apple. This is updated every time
 the snake eats the apple. Byte `$02` contains the current direction. `1` means
