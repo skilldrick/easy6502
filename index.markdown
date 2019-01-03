@@ -524,7 +524,7 @@ You can use letters, digits and underscores in a name.
 
 Here's an example. Note that immediate operands are still prefixed with a `#`.
 {% include start.html %}
-  define  sysRandom  $fe ; an adress
+  define  sysRandom  $fe ; an address
   define  a_dozen    $0c ; a constant
  
   LDA sysRandom  ; equivalent to "LDA $fe"
@@ -583,8 +583,8 @@ and `$10` upwards is a pair of bytes representing a two-byte memory location
 that will be looked up using indirect addressing.  These memory locations will
 all be between `$0200` and `$05ff` - the section of memory corresponding to the
 simulator display. For example, if `$00` and `$01` contained the values `$01`
-and `$02`, they would be referring to the second pixel of the display (`$0201`
-- remember, the least significant byte comes first in indirect addressing).
+and `$02`, they would be referring to the second pixel of the display (
+`$0201` - remember, the least significant byte comes first in indirect addressing).
 
 The first two bytes hold the location of the apple. This is updated every time
 the snake eats the apple. Byte `$02` contains the current direction. `1` means
@@ -754,7 +754,7 @@ These strips map to `$0200-$02ff`, `$0300-$03ff`, `$0400-$04ff` and `$0500-$05ff
 The first rows of pixels are `$0200-$021f`, `$0220-$023f`, `$0240-$025f`, etc.
 
 As long as you're moving within one of these horizontal strips, things are
-simple. For example, to move right, just incrememnt the least significant byte
+simple. For example, to move right, just increment the least significant byte
 (e.g. `$0200` becomes `$0201`). To go down, add `$20` (e.g. `$0200` becomes
 `$0220`). Left and up are the reverse.
 
