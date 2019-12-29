@@ -155,7 +155,7 @@ function SimulatorWidget(node) {
     }
 
     function toggleMonitor() {
-      $node.find('.monitor').toggle();
+      $node.find('.monitor').toggle($node.find('.monitoring')[0].checked);
     }
 
     function showNotes() {
@@ -1697,8 +1697,8 @@ function SimulatorWidget(node) {
       message("\nStopped\n");
     }
 
-    function toggleMonitor() {
-      monitoring = !monitoring;
+    function toggleMonitor (active) {
+      monitoring = active;
     }
 
     return {
