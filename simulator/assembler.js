@@ -45,8 +45,9 @@ function SimulatorWidget(node) {
       }
     });
     $node.find('.monitoring').change(function () {
-      ui.toggleMonitor();
-      simulator.toggleMonitor();
+      var state = document.getElementsByClassName('monitoring')[0].checked;
+      ui.toggleMonitor(state);
+      simulator.toggleMonitor(state);
     });
     $node.find('.start, .length').blur(simulator.handleMonitorRangeChange);
     $node.find('.stepButton').click(simulator.debugExec);
@@ -154,8 +155,8 @@ function SimulatorWidget(node) {
       setState(assembled);
     }
 
-    function toggleMonitor() {
-      $node.find('.monitor').toggle($node.find('.monitoring')[0].checked);
+    function toggleMonitor (state) {
+      $node.find('.monitor').toggle(state);
     }
 
     function showNotes() {
@@ -1697,8 +1698,8 @@ function SimulatorWidget(node) {
       message("\nStopped\n");
     }
 
-    function toggleMonitor (active) {
-      monitoring = active;
+    function toggleMonitor (state) {
+      monitoring = state;
     }
 
     return {
