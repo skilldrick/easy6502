@@ -45,7 +45,7 @@ function SimulatorWidget(node) {
       }
     });
     $node.find('.monitoring').change(function () {
-      var state = document.getElementsByClassName('monitoring')[0].checked;
+      var state = this.checked;
       ui.toggleMonitor(state);
       simulator.toggleMonitor(state);
     });
