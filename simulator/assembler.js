@@ -2077,6 +2077,9 @@ function SimulatorWidget(node) {
           if (ch === "$") {
             number = parseInt(str.replace(/^\$/, ""), 16);
             pushByte(number);
+          } else if (ch ==="%") {
+            number = parseInt(str.replace(/^%/, ""), 2)
+            pushByte(number)
           } else if (ch >= "0" && ch <= "9") {
             number = parseInt(str, 10);
             pushByte(number);
@@ -2099,17 +2102,24 @@ function SimulatorWidget(node) {
       }
       
       var value;
-    
+      var match_data;
+
+      // Is it a decimal operand?
+      match_data = param.match(/^([0-9]{1,3})$/);
+      if (match_data) {
+        value = parseInt(match_data[1], 10);
+      }
+
       // Is it a hexadecimal operand?
-      var match_data = param.match(/^\$([0-9a-f]{1,2})$/i);
+      match_data = param.match(/^\$([0-9a-f]{1,2})$/i);
       if (match_data) {
         value = parseInt(match_data[1], 16);
-      } else {
-        // Is it a decimal operand?
-        match_data = param.match(/^([0-9]{1,3})$/i);
-        if (match_data) {
-          value = parseInt(match_data[1], 10);
-        }
+      }
+
+      // Is it a binary operand?
+      match_data = param.match(/^%([0-1]{1,8})$/);
+      if (match_data) {
+        value = parseInt(match_data[1], 2);
       }
       
       // Validate range
@@ -2180,7 +2190,7 @@ function SimulatorWidget(node) {
       var value, label, hilo, addr;
       if (opcode === null) { return false; }
       
-      var match_data = param.match(/^#([\w\$]+)$/i);
+      var match_data = param.match(/^#([\w\$%]+)$/i);
       if (match_data) {
         var operand = tryParseByteOperand(match_data[1], symbols);
         if (operand >= 0) {
