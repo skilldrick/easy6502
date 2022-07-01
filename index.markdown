@@ -285,6 +285,8 @@ These are the absolute addressing versions of zero page,X and zero page,Y. For e
     LDX #$01
     STA $0200,X ;Store the value of A at memory location $0201
 
+Unlike zero page,Y, absolute,Y can't be used with `STX` but can be used with `LDA` and `STA`.
+
 ### Immediate: `#$c0` ###
 
 Immediate addressing doesn't strictly deal with memory addresses - this is the
