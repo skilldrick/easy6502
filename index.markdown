@@ -119,7 +119,7 @@ location `$0600`, so `PC` always starts there.
 The last section shows the processor flags. Each flag is one bit, so all seven
 flags live in a single byte. The flags are set by the processor to give
 information about the previous instruction. More on that later. [Read more
-about the registers and flags here](http://www.obelisk.me.uk/6502/registers.html).
+about the registers and flags here](https://web.archive.org/web/20210626024532/http://www.obelisk.me.uk/6502/registers.html).
 
 
 <h2 id='instructions'>Instructions</h2>
