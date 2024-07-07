@@ -253,6 +253,10 @@ function SimulatorWidget(node) {
     function getWord(addr) {
       return get(addr) + (get(addr + 1) << 8);
     }
+	
+	function getWordZP(addr) {
+		return get(addr) + (get((addr + 1) & 0xff) << 8);
+	}
 
     // Poke a byte, don't touch any registers
     function storeByte(addr, value) {
@@ -290,6 +294,7 @@ function SimulatorWidget(node) {
       set: set,
       get: get,
       getWord: getWord,
+      getWordZP: getWordZP,
       storeByte: storeByte,
       storeKeypress: storeKeypress,
       format: format
@@ -527,7 +532,7 @@ function SimulatorWidget(node) {
 
       i01: function () {
         var zp = (popByte() + regX) & 0xff;
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         var value = memory.get(addr);
         regA |= value;
         ORA();
@@ -586,7 +591,7 @@ function SimulatorWidget(node) {
 
       i11: function () {
         var zp = popByte();
-        var value = memory.getWord(zp) + regY;
+        var value = memory.getWordZP(zp) + regY;
         regA |= memory.get(value);
         ORA();
       },
@@ -642,7 +647,7 @@ function SimulatorWidget(node) {
 
       i21: function () {
         var zp = (popByte() + regX) & 0xff;
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         var value = memory.get(addr);
         regA &= value;
         AND();
@@ -719,7 +724,7 @@ function SimulatorWidget(node) {
 
       i31: function () {
         var zp = popByte();
-        var value = memory.getWord(zp) + regY;
+        var value = memory.getWordZP(zp) + regY;
         regA &= memory.get(value);
         AND();
       },
@@ -778,7 +783,7 @@ function SimulatorWidget(node) {
 
       i41: function () {
         var zp = (popByte() + regX) & 0xff;
-        var value = memory.getWord(zp);
+        var value = memory.getWordZP(zp);
         regA ^= memory.get(value);
         EOR();
       },
@@ -844,7 +849,7 @@ function SimulatorWidget(node) {
 
       i51: function () {
         var zp = popByte();
-        var value = memory.getWord(zp) + regY;
+        var value = memory.getWordZP(zp) + regY;
         regA ^= memory.get(value);
         EOR();
       },
@@ -900,7 +905,7 @@ function SimulatorWidget(node) {
 
       i61: function () {
         var zp = (popByte() + regX) & 0xff;
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         var value = memory.get(addr);
         testADC(value);
         //ADC
@@ -975,7 +980,7 @@ function SimulatorWidget(node) {
 
       i71: function () {
         var zp = popByte();
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         var value = memory.get(addr + regY);
         testADC(value);
         //ADC
@@ -1032,7 +1037,7 @@ function SimulatorWidget(node) {
 
       i81: function () {
         var zp = (popByte() + regX) & 0xff;
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         memory.storeByte(addr, regA);
         //STA
       },
@@ -1087,7 +1092,7 @@ function SimulatorWidget(node) {
 
       i91: function () {
         var zp = popByte();
-        var addr = memory.getWord(zp) + regY;
+        var addr = memory.getWordZP(zp) + regY;
         memory.storeByte(addr, regA);
         //STA
       },
@@ -1136,7 +1141,7 @@ function SimulatorWidget(node) {
 
       ia1: function () {
         var zp = (popByte() + regX) & 0xff;
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         regA = memory.get(addr);
         LDA();
       },
@@ -1201,7 +1206,7 @@ function SimulatorWidget(node) {
 
       ib1: function () {
         var zp = popByte();
-        var addr = memory.getWord(zp) + regY;
+        var addr = memory.getWordZP(zp) + regY;
         regA = memory.get(addr);
         LDA();
       },
@@ -1263,7 +1268,7 @@ function SimulatorWidget(node) {
 
       ic1: function () {
         var zp = (popByte() + regX) & 0xff;
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         var value = memory.get(addr);
         doCompare(regA, value);
         //CPA
@@ -1329,7 +1334,7 @@ function SimulatorWidget(node) {
 
       id1: function () {
         var zp = popByte();
-        var addr = memory.getWord(zp) + regY;
+        var addr = memory.getWordZP(zp) + regY;
         var value = memory.get(addr);
         doCompare(regA, value);
         //CMP
@@ -1378,7 +1383,7 @@ function SimulatorWidget(node) {
 
       ie1: function () {
         var zp = (popByte() + regX) & 0xff;
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         var value = memory.get(addr);
         testSBC(value);
         //SBC
@@ -1451,7 +1456,7 @@ function SimulatorWidget(node) {
 
       if1: function () {
         var zp = popByte();
-        var addr = memory.getWord(zp);
+        var addr = memory.getWordZP(zp);
         var value = memory.get(addr + regY);
         testSBC(value);
         //SBC
