@@ -11,3 +11,38 @@ This (original) fork is now in a strict maintenance-only mode. Pull requests are
 Please see other active forks for further refinements and developments of the tutorial and the emulator:
 https://github.com/skilldrick/easy6502/network
 
+## Local setup
+
+To run the project locally follow these steps.
+
+Make sure that the latest version of Ruby is correctly installed on your system, you can use [rbenv](https://github.com/rbenv/rbenv).
+
+Clone the repository:
+
+```bash
+git clone https://github.com/skilldrick/easy6502.git
+cd easy6502
+```
+
+Create a new `Gemfile` in the root of the project with the following content:
+
+```ruby
+source 'https://rubygems.org'
+
+gem 'jekyll'
+gem 'github-pages', group: :jekyll_plugins
+```
+
+Then execute these commands:
+
+```bash
+# install the dependencies
+gem install bundler
+bundle install
+
+# build the project (inside "_site" directory)
+bundle exec jekyll build
+
+# serve the project locally and watch for changes (from "_site" directory)
+bundle exec jekyll serve
+```
